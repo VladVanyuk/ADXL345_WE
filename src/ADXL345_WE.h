@@ -25,8 +25,23 @@
  #include "WProgram.h"
 #endif
 
+#define USE_I2C
+//#define USE_SPI
+
+#ifdef USE_I2C
 #include <Wire.h>
+#define ADXL345_I2CADDR 0x53
+#define ADXL345_I2CADDR_HIGH 0x1D // if SDO = HIGH
+#endif
+
+#ifdef USE_SPI
 #include <SPI.h>
+#endif
+
+
+// #define VECTOR_MAGNITUDE(x, y, z) (sqrt((x) * (x) + (y) * (y) + (z) * (z)))
+#define VECTOR(x, y, z) (sqrt((x) * (x) + (y) * (y) + (z) * (z)))
+#define VECTOR_G(xyz) (VECTOR(xyz.x, xyz.y, xyz.z))
 
 /* Definitions */
 
@@ -113,24 +128,26 @@ struct xyzFloat {
     float y;
     float z;
 };
-
+//typedef struct xyzFloat xyzFloat_t;
 
 class ADXL345_WE
 {
     public: 
         
         /* Constructors */
-        
-        ADXL345_WE(uint8_t addr = 0x53) : _wire{&Wire}, i2cAddress{addr}, useSPI{false} {}
+        ADXL345_WE() : useSPI{false} {}
+#ifdef USE_I2C
+        ADXL345_WE(uint8_t addr) : _wire{&Wire}, i2cAddress{addr}, useSPI{false} {} //uint8_t addr = 0x53
         
         ADXL345_WE(TwoWire *w, uint8_t addr = 0x53) : _wire{w}, i2cAddress{addr}, useSPI{false} {}
-        
+#endif
+#ifdef USE_SPI
         ADXL345_WE(int cs, bool spi, int mosi = 999, int miso = 999, int sck = 999) 
             : _spi{&SPI}, csPin{cs}, useSPI{spi}, mosiPin{mosi}, misoPin{miso}, sckPin{sck} {}
             
         ADXL345_WE(SPIClass *s, int cs, bool spi, int mosi = 999, int miso = 999, int sck = 999)
             :  _spi{s}, csPin{cs}, useSPI{spi}, mosiPin{mosi}, misoPin{miso}, sckPin{sck} {}
-        
+#endif
         /* registers */
         
         static constexpr uint8_t ADXL345_DEVID            {0x00};
@@ -154,6 +171,7 @@ class ADXL345_WE
         static constexpr uint8_t ADXL345_INT_ENABLE       {0x2E};
         static constexpr uint8_t ADXL345_INT_MAP          {0x2F};
         static constexpr uint8_t ADXL345_INT_SOURCE       {0x30};
+        //TODO ANALYZE
         static constexpr uint8_t ADXL345_DATA_FORMAT      {0x31};
         static constexpr uint8_t ADXL345_DATAX0           {0x32};
         static constexpr uint8_t ADXL345_DATAX1           {0x33};
@@ -178,7 +196,13 @@ class ADXL345_WE
         /* Basic settings */
         
         bool init();
+#ifdef USE_I2C
+        void setWire(TwoWire *w);
+        void setAddr(uint8_t addr);
+#endif
+#ifdef USE_SPI
         void setSPIClockSpeed(unsigned long clock);
+#endif
         void setCorrFactors(float xMin, float xMax, float yMin, float yMax, float zMin, float zMax);
         void setDataRate(adxl345_dataRate rate);
         adxl345_dataRate getDataRate();
@@ -194,6 +218,10 @@ class ADXL345_WE
         xyzFloat getRawValues();
         xyzFloat getCorrectedRawValues();
         xyzFloat getGValues();
+        float getVectorG();
+        float getVectorG(xyzFloat *gVal);
+        float getVectorG(float *x, float *y, float *z);
+       // float getImpact(float *x, float *y, float *z);
         xyzFloat getAngles();
         xyzFloat getCorrAngles();
             
@@ -226,35 +254,76 @@ class ADXL345_WE
         uint8_t readAndClearInterrupts();
         bool checkInterrupt(uint8_t source, adxl345_int type);
         void setLinkBit(bool link);
-        void setFreeFallThresholds(float ffg, float fft);
+
+        /** The parameters of the setFreeFallThresholds function are:
+             - g threshold - do not choose a parameter which is too low. 0.3 - 0.6 g is fine.
+             - time threshold in ms, maximum is 1275. Recommended is 100 - 350;
+            If time threshold is too low, vibrations can be detected as free fall.
+        */
+        void setFreeFallThresholds(float threshold, float fftime);
         void setActivityParameters(adxl345_dcAcMode mode, adxl345_actTapSet axes, float threshold);
         void setInactivityParameters(adxl345_dcAcMode mode, adxl345_actTapSet axes, float threshold, uint8_t inactTime);
         void setGeneralTapParameters(adxl345_actTapSet axes, float threshold, float duration, float latent);
+
+        /* For double tap detection additional parameters have to be set:
+            1. Suppress bit: if the bit is set, a spike over the threshold during the latency time will invalidate
+                the double tap. You find graphs that explain this better than words in the data sheet. If the bit is 
+                not set, the tap during latency time will be ignored. Another tap in the time window (see 2) will lead 
+                to double tap detection. 
+            2. Time window in milliseconds: starts after latency time. The second tap must occur during the time window
+                period, otherwise it is a single tap (if single tap is active). Maximum window is 318 ms.
+        */
         void setAdditionalDoubleTapParameters(bool suppress, float window);
         uint8_t getActTapStatus();
         String getActTapStatusAsString();
-        
-        /* FIFO */
-        
+        uint8_t getActTapStatusAsValue();
+
+        /** FIFO */
+       
+        /** The following two FIFO parameters need to be set:
+         *    1. Trigger Bit: the trigger is an interrupt at INT1 or INT2
+         *       ADXL345_TRIGGER_INT_1 - Trigger is an interrupt at INT1
+         *       ADXL345_TRIGGER_INT_2 - Trigger is an interrupt at INT2 
+         *      @note not relevant for: 
+         *             ADXL345_STREAM 
+         *             ADXL345_FIFO
+         *             ADXL345_TRIGGER
+         *    2. FIFO samples (max 32). Defines the size of the FIFO. @note One sample is an x,y,z triple.
+         */
         void setFifoParameters(adxl345_triggerInt intNumber, uint8_t samples);
+    
+        /** Choose the following FIFO modes:
+        *    ADXL345_FIFO     -  you choose the start, ends when FIFO is full (at defined limit)
+        *    ADXL345_STREAM   -  FIFO always filled with new data, old data replaced if FIFO is full; you choose the stop
+        *    ADXL345_TRIGGER  -  FIFO always filled up to 32 samples; when the trigger event occurs only defined number of samples
+        *                        is kept in the FIFO and further samples are taken after the event until FIFO is full again. 
+        *    ADXL345_BYPASS   -  no FIFO
+        */  
         void setFifoMode(adxl345_fifoMode mode);
         uint8_t getFifoStatus();
         void resetTrigger();
        
     protected:
-        TwoWire *_wire;
-        SPIClass *_spi;
+#ifdef USE_I2C
+        TwoWire *_wire = nullptr;
+        uint8_t i2cAddress=ADXL345_I2CADDR;
+#endif
+#ifdef USE_SPI
+        SPIClass *_spi = nullptr;
         SPISettings mySPISettings;
-        uint8_t i2cAddress;
+#endif
         uint8_t regVal;   // intermediate storage of register values
         xyzFloat offsetVal;
         xyzFloat angleOffsetVal;
         xyzFloat corrFact;
+        
+        bool useSPI; 
+ #ifdef USE_SPI   
         int csPin;
-        bool useSPI;    
         int mosiPin;
         int misoPin;
-        int sckPin;     
+        int sckPin;  
+ #endif   
         float rangeFactor;
         uint8_t writeRegister(uint8_t reg, uint8_t val);
         uint8_t readRegister8(uint8_t reg);
