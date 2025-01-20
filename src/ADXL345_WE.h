@@ -130,6 +130,21 @@ struct xyzFloat {
 };
 //typedef struct xyzFloat xyzFloat_t;
 
+//todo test
+typedef struct {
+    volatile float* x;
+    volatile float* y;
+    volatile float* z;
+} xyzValues;
+
+
+//todo test
+typedef struct {
+    xyzValues *values;
+    volatile float* g;    
+} xyzVectorG;
+
+
 class ADXL345_WE
 {
     public: 
@@ -219,8 +234,9 @@ class ADXL345_WE
         xyzFloat getCorrectedRawValues();
         xyzFloat getGValues();
         float getVectorG();
-        float getVectorG(xyzFloat *gVal);
-        float getVectorG(float *x, float *y, float *z);
+        float getVectorG(xyzVectorG *gVal);
+        // float getVectorG(float *x, float *y, float *z);
+
        // float getImpact(float *x, float *y, float *z);
         xyzFloat getAngles();
         xyzFloat getCorrAngles();

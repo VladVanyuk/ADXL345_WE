@@ -254,23 +254,43 @@ float ADXL345_WE::getVectorG(){
     return VECTOR_G(gVal);
 }
 
-float ADXL345_WE::getVectorG(xyzFloat *gVal){
-    if (gVal == nullptr)
+
+float ADXL345_WE::getVectorG(xyzVectorG *allValues){
+    if (allValues == nullptr)
     {
         return 0.0;
     }
-    *gVal = getGValues();
-    return sqrt(gVal->x * gVal->x + gVal->y * gVal->y + gVal->z * gVal->z);
+    xyzFloat gVal= getGValues();
+    *allValues->values->x = gVal.x;
+    *allValues->values->y = gVal.y;
+    *allValues->values->z = gVal.z;
+    *allValues->g = VECTOR_G(gVal);
+    return (*allValues->g);
 }
 
-float ADXL345_WE::getVectorG(float *x, float *y, float *z){
-    xyzFloat gVal  = {0.0, 0.0, 0.0};
-    float vector = getVectorG(&gVal);
-    *x = gVal.x;
-    *y = gVal.y;
-    *z = gVal.z;
-    return vector;
-}
+
+
+// float ADXL345_WE::getVectorG(void *gValStruct){
+    // if (gValStruct == nullptr)
+    // {
+        // return 0.0;
+    // }
+    // xyzFloat *gVal = static_cast<xyzFloat*>(gValStruct); 
+    // *gVal = 
+    // 
+    // *(static_cast<xyzFloat*>(gValStruct)) = getGValues();;
+    // return sqrt(gVal->x * gVal->x + gVal->y * gVal->y + gVal->z * gVal->z);
+// }
+// 
+
+// float ADXL345_WE::getVectorG(float *x, float *y, float *z){
+//     xyzFloat gVal  = {0.0, 0.0, 0.0};
+//     float vector = getVectorG(&gVal);
+//     *x = gVal.x;
+//     *y = gVal.y;
+//     *z = gVal.z;
+//     return vector;
+// }
 
 
 xyzFloat ADXL345_WE::getAngles(){
@@ -524,6 +544,7 @@ bool ADXL345_WE::checkInterrupt(uint8_t source, adxl345_int type){
     source &= (1<<type);
     return source;
 }
+
 void ADXL345_WE::setLinkBit(bool link){
     regVal = readRegister8(ADXL345_POWER_CTL);
     if(link){
