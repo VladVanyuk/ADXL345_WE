@@ -10,17 +10,17 @@
 ***************************************************************************/
 #include<Wire.h>
 #include<ADXL345_WE.h>
-#define ADXL345_I2CADDR 0x53 // 0x1D if SDO = HIGH
+#define ADXL345_I2CADDR_DEFAULT 0x53 // 0x1D if SDO = HIGH
 const int int2Pin = 2;
 volatile bool tap = false;
 
 /* There are several ways to create your ADXL345 object:
  * ADXL345_WE myAcc = ADXL345_WE()                -> uses Wire / I2C Address = 0x53
- * ADXL345_WE myAcc = ADXL345_WE(ADXL345_I2CADDR) -> uses Wire / ADXL345_I2CADDR
- * ADXL345_WE myAcc = ADXL345_WE(&wire2)          -> uses the TwoWire object wire2 / ADXL345_I2CADDR
- * ADXL345_WE myAcc = ADXL345_WE(&wire2, ADXL345_I2CADDR) -> all together
+ * ADXL345_WE myAcc = ADXL345_WE(ADXL345_I2CADDR_DEFAULT) -> uses Wire / ADXL345_I2CADDR_DEFAULT
+ * ADXL345_WE myAcc = ADXL345_WE(&wire2)          -> uses the TwoWire object wire2 / ADXL345_I2CADDR_DEFAULT
+ * ADXL345_WE myAcc = ADXL345_WE(&wire2, ADXL345_I2CADDR_DEFAULT) -> all together
  */
-ADXL345_WE myAcc = ADXL345_WE(ADXL345_I2CADDR);
+ADXL345_WE myAcc = ADXL345_WE(ADXL345_I2CADDR_DEFAULT);
 
 void setup() {
   Wire.begin();

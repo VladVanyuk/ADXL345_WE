@@ -16,9 +16,27 @@
 
 #include "ADXL345_WE.h"
 
+#ifdef  ADXL345_DEBUG
+    #define ADXL_PRINT(x) Serial.print(x)
+    #define ADXL_PRINTLN(x) Serial.println(x)
+#endif
+
+#define ADXL345_TO_READ (6)      // num of bytes we are going to read each time (two bytes for each axis)
+
+void print_byte(byte val) {
+    int i;
+    ADXL_PRINT("B");
+    for (i = 7; i >= 0; i--) {
+        ADXL_PRINT(val >> i & 1, BIN);
+    }
+}
+
 /************ Basic settings ************/
     
 bool ADXL345_WE::init(){
+    // status = ADXL345_OK;
+   // error_code = ADXL345_NO_ERROR;
+
 #ifdef USE_SPI
     if(useSPI){
         if(mosiPin == 999){
@@ -51,8 +69,8 @@ bool ADXL345_WE::init(){
     }
 #endif
 
-    writeRegister(ADXL345_POWER_CTL,0);
-    writeRegister(ADXL345_POWER_CTL, 16);   
+    writeToRegister(ADXL345_POWER_CTL,0);
+    writeToRegister(ADXL345_POWER_CTL, 16);   
     setMeasureMode(true);
     rangeFactor = 1.0;
     corrFact.x = 1.0;
@@ -64,28 +82,28 @@ bool ADXL345_WE::init(){
     angleOffsetVal.x = 0.0;
     angleOffsetVal.y = 0.0;
     angleOffsetVal.z = 0.0;
-    writeRegister(ADXL345_DATA_FORMAT,0);
+    writeToRegister(ADXL345_DATA_FORMAT,0);
     setFullRes(true);
-    uint8_t ctrlVal = readRegister8(ADXL345_DATA_FORMAT);
+    uint8_t ctrlVal = readRegisterSingle(ADXL345_DATA_FORMAT);
     if(ctrlVal != 0b1000){
         return false;
     }
-    // if(!((readRegister8(ADXL345_DATA_FORMAT)) & (1<<ADXL345_FULL_RES))){
+    // if(!((readRegisterSingle(ADXL345_DATA_FORMAT)) & (1<<ADXL345_FULL_RES))){
     //     return false;
     // }
-    writeRegister(ADXL345_INT_ENABLE, 0);
-    writeRegister(ADXL345_INT_MAP,0);
-    writeRegister(ADXL345_TIME_INACT, 0);
-    writeRegister(ADXL345_THRESH_INACT,0);
-    writeRegister(ADXL345_ACT_INACT_CTL, 0);
-    writeRegister(ADXL345_DUR,0);
-    writeRegister(ADXL345_LATENT,0);
-    writeRegister(ADXL345_THRESH_TAP,0);
-    writeRegister(ADXL345_TAP_AXES,0);
-    writeRegister(ADXL345_WINDOW, 0);
+    writeToRegister(ADXL345_INT_ENABLE, 0);
+    writeToRegister(ADXL345_INT_MAP,0);
+    writeToRegister(ADXL345_TIME_INACT, 0);
+    writeToRegister(ADXL345_THRESH_INACT,0);
+    writeToRegister(ADXL345_ACT_INACT_CTL, 0);
+    writeToRegister(ADXL345_DUR,0);
+    writeToRegister(ADXL345_LATENT,0);
+    writeToRegister(ADXL345_THRESH_TAP,0);
+    writeToRegister(ADXL345_TAP_AXES,0);
+    writeToRegister(ADXL345_WINDOW, 0);
     readAndClearInterrupts();
-    writeRegister(ADXL345_FIFO_CTL,0);
-    writeRegister(ADXL345_FIFO_STATUS,0);
+    writeToRegister(ADXL345_FIFO_CTL,0);
+    writeToRegister(ADXL345_FIFO_STATUS,0);
      
     return true;
 }
@@ -109,6 +127,22 @@ void ADXL345_WE::setSPIClockSpeed(unsigned long clock){
 }
 #endif
 
+
+// gets the state of the SELF_TEST bit
+bool ADXL345_WE::getSelfTestBit() {
+    return getRegisterBit(ADXL345_DATA_FORMAT, 7);
+}
+
+// Sets the SELF-TEST bit
+// if set to 1 it applies a self-test force to the sensor causing a shift in the output data
+// if set to 0 it disables the self-test force
+void ADXL345_WE::setSelfTestBit(bool selfTestBit) {
+    setRegisterBit(ADXL345_DATA_FORMAT, 7, selfTestBit);
+}
+
+
+
+
 void ADXL345_WE::setCorrFactors(float xMin, float xMax, float yMin, float yMax, float zMin, float zMax){
     corrFact.x = UNITS_PER_G / (0.5 * (xMax - xMin));
     corrFact.y = UNITS_PER_G / (0.5 * (yMax - yMin));
@@ -119,18 +153,18 @@ void ADXL345_WE::setCorrFactors(float xMin, float xMax, float yMin, float yMax, 
 }
 
 void ADXL345_WE::setDataRate(adxl345_dataRate rate){
-    regVal |= readRegister8(ADXL345_BW_RATE);
-    regVal &= 0xF0;
-    regVal |= rate;
-    writeRegister(ADXL345_BW_RATE, regVal);
+    this->regVal |= readRegisterSingle(ADXL345_BW_RATE);
+    this->regVal &= 0xF0;
+    this->regVal |= rate;
+    writeToRegister(ADXL345_BW_RATE, this->regVal);
 }
     
 adxl345_dataRate ADXL345_WE::getDataRate(){
-    return (adxl345_dataRate)(readRegister8(ADXL345_BW_RATE) & 0x0F);
+    return (adxl345_dataRate)(readRegisterSingle(ADXL345_BW_RATE) & 0x0F);
 }
 
 String ADXL345_WE::getDataRateAsString(){
-    adxl345_dataRate dataRate = (adxl345_dataRate)(readRegister8(ADXL345_BW_RATE) & 0x0F);
+    adxl345_dataRate dataRate = (adxl345_dataRate)(readRegisterSingle(ADXL345_BW_RATE) & 0x0F);
     String returnString = "";
     
     switch(dataRate) {
@@ -156,11 +190,11 @@ String ADXL345_WE::getDataRateAsString(){
 }
 
 uint8_t ADXL345_WE::getPowerCtlReg(){
-    return readRegister8(ADXL345_POWER_CTL);
+    return readRegisterSingle(ADXL345_POWER_CTL);
 }
 
 void ADXL345_WE::setRange(adxl345_range range){
-    uint8_t regVal = readRegister8(ADXL345_DATA_FORMAT);
+    uint8_t regValue = readRegisterSingle(ADXL345_DATA_FORMAT);
     if(adxl345_lowRes){
         switch(range){
             case ADXL345_RANGE_2G:  rangeFactor = 1.0;  break;
@@ -172,30 +206,30 @@ void ADXL345_WE::setRange(adxl345_range range){
     else{
         rangeFactor = 1.0;
     }
-    regVal &= 0b11111100;
-    regVal |= range;
-    writeRegister(ADXL345_DATA_FORMAT, regVal);
+    regValue &= 0b11111100;
+    regValue |= range;
+    writeToRegister(ADXL345_DATA_FORMAT, this->regVal);
 }
 
 adxl345_range ADXL345_WE::getRange(){
-    regVal = readRegister8(ADXL345_DATA_FORMAT);
-    regVal &= 0x03; 
-    return adxl345_range(regVal);
+    this->regVal = readRegisterSingle(ADXL345_DATA_FORMAT);
+    this->regVal &= 0x03; 
+    return adxl345_range(this->regVal);
 }
 
 void ADXL345_WE::setFullRes(boolean full){
-    regVal = readRegister8(ADXL345_DATA_FORMAT);
+    this->regVal = readRegisterSingle(ADXL345_DATA_FORMAT);
     if(full){
         adxl345_lowRes = false;
         rangeFactor = 1.0;
-        regVal |= (1<<ADXL345_FULL_RES);
+        this->regVal |= (1<<ADXL345_FULL_RES);
     }
     else{
         adxl345_lowRes = true;
-        regVal &= ~(1<<ADXL345_FULL_RES);
+        this->regVal &= ~(1<<ADXL345_FULL_RES);
         setRange(getRange());
     }
-    writeRegister(ADXL345_DATA_FORMAT, regVal);
+    writeToRegister(ADXL345_DATA_FORMAT, this->regVal);
 }
 
 String ADXL345_WE::getRangeAsString(){
@@ -214,9 +248,9 @@ String ADXL345_WE::getRangeAsString(){
 /************ x,y,z results ************/
 
 xyzFloat ADXL345_WE::getRawValues(){
-    uint8_t rawData[6]; 
+    uint8_t rawData[ADXL345_TO_READ]; 
     xyzFloat rawVal = {0.0, 0.0, 0.0};
-    readMultipleRegisters(ADXL345_DATAX0, 6, rawData);
+    readFromRegisterMulti(ADXL345_DATAX0, ADXL345_TO_READ, rawData);
     rawVal.x = (static_cast<int16_t>((rawData[1] << 8) | rawData[0])) * 1.0;
     rawVal.y = (static_cast<int16_t>((rawData[3] << 8) | rawData[2])) * 1.0;
     rawVal.z = (static_cast<int16_t>((rawData[5] << 8) | rawData[4])) * 1.0;
@@ -225,9 +259,9 @@ xyzFloat ADXL345_WE::getRawValues(){
 }
 
 xyzFloat ADXL345_WE::getCorrectedRawValues(){
-    uint8_t rawData[6]; 
+    uint8_t rawData[ADXL345_TO_READ]; 
     xyzFloat rawVal = {0.0, 0.0, 0.0};
-    readMultipleRegisters(ADXL345_DATAX0, 6, rawData);
+    readFromRegisterMulti(ADXL345_DATAX0, ADXL345_TO_READ, rawData);
     int16_t xRaw = static_cast<int16_t>(rawData[1] << 8) | rawData[0];
     int16_t yRaw = static_cast<int16_t>(rawData[3] << 8) | rawData[2];
     int16_t zRaw = static_cast<int16_t>(rawData[5] << 8) | rawData[4];
@@ -407,45 +441,45 @@ float ADXL345_WE::getRoll(){
 /************ Power, Sleep, Standby ************/ 
 
 void ADXL345_WE::setMeasureMode(bool measure){
-    regVal = readRegister8(ADXL345_POWER_CTL);
+    this->regVal = readRegisterSingle(ADXL345_POWER_CTL);
     if(measure){
-        regVal |= (1<<ADXL345_MEASURE);
+        this->regVal |= (1<<ADXL345_MEASURE);
     }
     else{
-        regVal &= ~(1<<ADXL345_MEASURE);
+        this->regVal &= ~(1<<ADXL345_MEASURE);
     }
-    writeRegister(ADXL345_POWER_CTL, regVal);
+    writeToRegister(ADXL345_POWER_CTL, this->regVal);
 }
 
 void ADXL345_WE::setSleep(bool sleep, adxl345_wUpFreq freq){
-    regVal = readRegister8(ADXL345_POWER_CTL);
-    regVal &= 0b11111100;
-    regVal |= freq;
+    this->regVal = readRegisterSingle(ADXL345_POWER_CTL);
+    this->regVal &= 0b11111100;
+    this->regVal |= freq;
     if(sleep){
-        regVal |= (1<<ADXL345_SLEEP);
+        this->regVal |= (1<<ADXL345_SLEEP);
     }
     else{
         setMeasureMode(false);  // it is recommended to enter Stand Mode when clearing the Sleep Bit!
-        regVal &= ~(1<<ADXL345_SLEEP);
-        regVal &= ~(1<<ADXL345_MEASURE);
+        this->regVal &= ~(1<<ADXL345_SLEEP);
+        this->regVal &= ~(1<<ADXL345_MEASURE);
     }
-    writeRegister(ADXL345_POWER_CTL, regVal);
+    writeToRegister(ADXL345_POWER_CTL, this->regVal);
     if(!sleep){
         setMeasureMode(true);
     }
 }
 
 void ADXL345_WE::setSleep(bool sleep){
-    regVal = readRegister8(ADXL345_POWER_CTL);
+    this->regVal = readRegisterSingle(ADXL345_POWER_CTL);
     if(sleep){
-        regVal |= (1<<ADXL345_SLEEP);
+        this->regVal |= (1<<ADXL345_SLEEP);
     }
     else{
         setMeasureMode(false);  // it is recommended to enter Stand Mode when clearing the Sleep Bit!
-        regVal &= ~(1<<ADXL345_SLEEP);
-        regVal &= ~(1<<ADXL345_MEASURE);
+        this->regVal &= ~(1<<ADXL345_SLEEP);
+        this->regVal &= ~(1<<ADXL345_MEASURE);
     }
-    writeRegister(ADXL345_POWER_CTL, regVal);
+    writeToRegister(ADXL345_POWER_CTL, this->regVal);
     if(!sleep){
         setMeasureMode(true);
     }
@@ -455,89 +489,89 @@ void ADXL345_WE::setAutoSleep(bool autoSleep, adxl345_wUpFreq freq){
     if(autoSleep){
         setLinkBit(true);
     }
-    regVal = readRegister8(ADXL345_POWER_CTL);
-    regVal &= 0b11111100;
-    regVal |= freq;
+    this->regVal = readRegisterSingle(ADXL345_POWER_CTL);
+    this->regVal &= 0b11111100;
+    this->regVal |= freq;
     if(autoSleep){
-        regVal |= (1<<ADXL345_AUTO_SLEEP);      
+        this->regVal |= (1<<ADXL345_AUTO_SLEEP);      
     }
     else{
-        regVal &= ~(1<<ADXL345_AUTO_SLEEP);
+        this->regVal &= ~(1<<ADXL345_AUTO_SLEEP);
     }
-    writeRegister(ADXL345_POWER_CTL, regVal);
+    writeToRegister(ADXL345_POWER_CTL, this->regVal);
 }
         
 void ADXL345_WE::setAutoSleep(bool autoSleep){
     if(autoSleep){
         setLinkBit(true);
-        regVal = readRegister8(ADXL345_POWER_CTL);
-        regVal |= (1<<ADXL345_AUTO_SLEEP);
-        writeRegister(ADXL345_POWER_CTL, regVal);
+        this->regVal = readRegisterSingle(ADXL345_POWER_CTL);
+        this->regVal |= (1<<ADXL345_AUTO_SLEEP);
+        writeToRegister(ADXL345_POWER_CTL, this->regVal);
     }
     else{
-        regVal = readRegister8(ADXL345_POWER_CTL);
-        regVal &= ~(1<<ADXL345_AUTO_SLEEP);
-        writeRegister(ADXL345_POWER_CTL, regVal);
+        this->regVal = readRegisterSingle(ADXL345_POWER_CTL);
+        this->regVal &= ~(1<<ADXL345_AUTO_SLEEP);
+        writeToRegister(ADXL345_POWER_CTL, this->regVal);
     }
         
 }
 
 bool ADXL345_WE::isAsleep(){
-    return readRegister8(ADXL345_ACT_TAP_STATUS) & (1<<ADXL345_ASLEEP);
+    return readRegisterSingle(ADXL345_ACT_TAP_STATUS) & (1<<ADXL345_ASLEEP);
 }
 
 void ADXL345_WE::setLowPower(bool lowpwr){
-    regVal = readRegister8(ADXL345_BW_RATE);
+    this->regVal = readRegisterSingle(ADXL345_BW_RATE);
     if(lowpwr){
-        regVal |= (1<<ADXL345_LOW_POWER);
+        this->regVal |= (1<<ADXL345_LOW_POWER);
     }
     else{
-        regVal &= ~(1<<ADXL345_LOW_POWER);
+        this->regVal &= ~(1<<ADXL345_LOW_POWER);
     }
-    writeRegister(ADXL345_BW_RATE, regVal);
+    writeToRegister(ADXL345_BW_RATE, this->regVal);
 }
 
 bool ADXL345_WE::isLowPower(){
-    return readRegister8(ADXL345_BW_RATE) & (1<<ADXL345_LOW_POWER);
+    return readRegisterSingle(ADXL345_BW_RATE) & (1<<ADXL345_LOW_POWER);
 }
             
 /************ Interrupts ************/
 
 
 void ADXL345_WE::setInterrupt(adxl345_int type, uint8_t pin){
-    regVal = readRegister8(ADXL345_INT_ENABLE);
-    regVal |= (1<<type);
-    writeRegister(ADXL345_INT_ENABLE, regVal);
-    regVal = readRegister8(ADXL345_INT_MAP);
+    this->regVal = readRegisterSingle(ADXL345_INT_ENABLE);
+    this->regVal |= (1<<type);
+    writeToRegister(ADXL345_INT_ENABLE, this->regVal);
+    this->regVal = readRegisterSingle(ADXL345_INT_MAP);
     if(pin == INT_PIN_1){
-        regVal &= ~(1<<type);
+        this->regVal &= ~(1<<type);
     }
     else {
-        regVal |= (1<<type);
+        this->regVal |= (1<<type);
     }
-    writeRegister(ADXL345_INT_MAP, regVal);
+    writeToRegister(ADXL345_INT_MAP, this->regVal);
 }
 
 void ADXL345_WE::setInterruptPolarity(uint8_t pol){
-    regVal = readRegister8(ADXL345_DATA_FORMAT);
+    this->regVal = readRegisterSingle(ADXL345_DATA_FORMAT);
     if(pol == ADXL345_ACT_HIGH){
-        regVal &= ~(0b00100000);
+        this->regVal &= ~(0b00100000);
     }
     else if(pol == ADXL345_ACT_LOW){
-        regVal |= 0b00100000;
+        this->regVal |= 0b00100000;
     }
-    writeRegister(ADXL345_DATA_FORMAT, regVal);
+    writeToRegister(ADXL345_DATA_FORMAT, this->regVal);
 }
 
 void ADXL345_WE::deleteInterrupt(adxl345_int type){
-    regVal = readRegister8(ADXL345_INT_ENABLE);
-    regVal &= ~(1<<type);
-    writeRegister(ADXL345_INT_ENABLE, regVal);  
+    this->regVal = readRegisterSingle(ADXL345_INT_ENABLE);
+    this->regVal &= ~(1<<type);
+    writeToRegister(ADXL345_INT_ENABLE, this->regVal);  
 }
 
 uint8_t ADXL345_WE::readAndClearInterrupts(){
-    regVal = readRegister8(ADXL345_INT_SOURCE);
-    return regVal;
+    this->regVal = readRegisterSingle(ADXL345_INT_SOURCE);
+    return this->regVal;
 }
 
 bool ADXL345_WE::checkInterrupt(uint8_t source, adxl345_int type){
@@ -546,58 +580,58 @@ bool ADXL345_WE::checkInterrupt(uint8_t source, adxl345_int type){
 }
 
 void ADXL345_WE::setLinkBit(bool link){
-    regVal = readRegister8(ADXL345_POWER_CTL);
+    this->regVal = readRegisterSingle(ADXL345_POWER_CTL);
     if(link){
-        regVal |= (1<<ADXL345_LINK);
+        this->regVal |= (1<<ADXL345_LINK);
     }
     else{
-        regVal &= ~(1<<ADXL345_LINK);
+        this->regVal &= ~(1<<ADXL345_LINK);
     }
-    writeRegister(ADXL345_POWER_CTL, regVal);
+    writeToRegister(ADXL345_POWER_CTL, this->regVal);
 }
 
 void ADXL345_WE::setFreeFallThresholds(float threshold, float fftime){
     double regValRaw = round(threshold / 0.0625);
-    regVal = static_cast<uint8_t>(regValRaw > UINT8_MAX ? UINT8_MAX : regValRaw);
-    if(regVal<1){
-        regVal = 1;
+    this->regVal = static_cast<uint8_t>(regValRaw > UINT8_MAX ? UINT8_MAX : regValRaw);
+    if(this->regVal<1){
+        this->regVal = 1;
     }
-    writeRegister(ADXL345_THRESH_FF, regVal);
-    regVal = static_cast<uint8_t>(round(fftime / 5));
-    if(regVal<1){
-        regVal = 1;
+    writeToRegister(ADXL345_THRESH_FF, this->regVal);
+    this->regVal = static_cast<uint8_t>(round(fftime / 5));
+    if(this->regVal<1){
+        this->regVal = 1;
     }
-    writeRegister(ADXL345_TIME_FF, regVal);
+    writeToRegister(ADXL345_TIME_FF, this->regVal);
 }
 
 void ADXL345_WE::setActivityParameters(adxl345_dcAcMode mode, adxl345_actTapSet axes, float threshold){
     double regValRaw = round(threshold / 0.0625);
-    regVal = static_cast<uint8_t>(regValRaw > UINT8_MAX ? UINT8_MAX : regValRaw);
-    if(regVal<1){
-        regVal = 1;
+    this->regVal = static_cast<uint8_t>(regValRaw > UINT8_MAX ? UINT8_MAX : regValRaw);
+    if(this->regVal<1){
+        this->regVal = 1;
     }
-    writeRegister(ADXL345_THRESH_ACT, regVal);
+    writeToRegister(ADXL345_THRESH_ACT, this->regVal);
 
-    regVal = readRegister8(ADXL345_ACT_INACT_CTL);
-    regVal &= 0x0F;
-    regVal |= (static_cast<uint8_t>(mode) + static_cast<uint8_t>(axes))<<4;
-    writeRegister(ADXL345_ACT_INACT_CTL, regVal);
+    this->regVal = readRegisterSingle(ADXL345_ACT_INACT_CTL);
+    this->regVal &= 0x0F;
+    this->regVal |= (static_cast<uint8_t>(mode) + static_cast<uint8_t>(axes))<<4;
+    writeToRegister(ADXL345_ACT_INACT_CTL, this->regVal);
 }
 
 void ADXL345_WE::setInactivityParameters(adxl345_dcAcMode mode, adxl345_actTapSet axes, float threshold, uint8_t inactTime){
     double regValRaw = round(threshold / 0.0625);
-    regVal = static_cast<uint8_t>(regValRaw > UINT8_MAX ? UINT8_MAX : regValRaw);
-    if(regVal<1){
-        regVal = 1;
+    this->regVal = static_cast<uint8_t>(regValRaw > UINT8_MAX ? UINT8_MAX : regValRaw);
+    if(this->regVal<1){
+        this->regVal = 1;
     }
-    writeRegister(ADXL345_THRESH_INACT, regVal);
+    writeToRegister(ADXL345_THRESH_INACT, this->regVal);
 
-    regVal = readRegister8(ADXL345_ACT_INACT_CTL);
-    regVal &= 0xF0;
-    regVal |= static_cast<uint8_t>(mode) + static_cast<uint16_t>(axes);
-    writeRegister(ADXL345_ACT_INACT_CTL, regVal);
+    this->regVal = readRegisterSingle(ADXL345_ACT_INACT_CTL);
+    this->regVal &= 0xF0;
+    this->regVal |= static_cast<uint8_t>(mode) + static_cast<uint16_t>(axes);
+    writeToRegister(ADXL345_ACT_INACT_CTL, this->regVal);
 
-    writeRegister(ADXL345_TIME_INACT, inactTime);
+    writeToRegister(ADXL345_TIME_INACT, inactTime);
 }
 
 /* The following four parameters have to be set for tap application (single and double):
@@ -621,17 +655,17 @@ void ADXL345_WE::setInactivityParameters(adxl345_dcAcMode mode, adxl345_actTapSe
         Starts at the end of duration or when the interrupt was triggered. Should be greater than 20 ms.  
 */
 void ADXL345_WE::setGeneralTapParameters(adxl345_actTapSet axes, float threshold, float duration, float latent){
-    regVal = readRegister8(ADXL345_TAP_AXES);
-    regVal &= 0b11111000;
-    regVal |= static_cast<uint8_t>(axes);
-    writeRegister(ADXL345_TAP_AXES, regVal);
+    this->regVal = readRegisterSingle(ADXL345_TAP_AXES);
+    this->regVal &= 0b11111000;
+    this->regVal |= static_cast<uint8_t>(axes);
+    writeToRegister(ADXL345_TAP_AXES, this->regVal);
     
     double regValRaw = round(threshold / 0.0625); // todo name coef 0.0625
-    regVal = static_cast<uint8_t>(regValRaw > UINT8_MAX ? UINT8_MAX : regValRaw);
-    if(regVal<1){
-        regVal = 1;
+    this->regVal = static_cast<uint8_t>(regValRaw > UINT8_MAX ? UINT8_MAX : regValRaw);
+    if(this->regVal<1){
+        this->regVal = 1;
     }
-    writeRegister(ADXL345_THRESH_TAP, regVal);
+    writeToRegister(ADXL345_THRESH_TAP, this->regVal);
     
     if (duration < 10) {
         duration = 10;
@@ -642,11 +676,11 @@ void ADXL345_WE::setGeneralTapParameters(adxl345_actTapSet axes, float threshold
     }
     
     regValRaw = round(duration / 0.625);
-    regVal = static_cast<uint8_t>(regValRaw > UINT8_MAX ? UINT8_MAX : regValRaw);
-    if(regVal<1){
-        regVal = 1;
+    this->regVal = static_cast<uint8_t>(regValRaw > UINT8_MAX ? UINT8_MAX : regValRaw);
+    if(this->regVal<1){
+        this->regVal = 1;
     }
-    writeRegister(ADXL345_DUR, regVal);
+    writeToRegister(ADXL345_DUR, this->regVal);
     
     if (latent < 20)
     {
@@ -659,38 +693,38 @@ void ADXL345_WE::setGeneralTapParameters(adxl345_actTapSet axes, float threshold
     }
     
     regValRaw = round(latent / 1.25);
-    regVal = static_cast<uint8_t>(regValRaw > UINT8_MAX ? UINT8_MAX : regValRaw);
-    if(regVal<1){
-        regVal = 1;
+    this->regVal = static_cast<uint8_t>(regValRaw > UINT8_MAX ? UINT8_MAX : regValRaw);
+    if(this->regVal<1){
+        this->regVal = 1;
     }
-    writeRegister(ADXL345_LATENT, regVal);      
+    writeToRegister(ADXL345_LATENT, this->regVal);      
 }
 
 void ADXL345_WE::setAdditionalDoubleTapParameters(bool suppress, float window){
-    regVal = readRegister8(ADXL345_TAP_AXES);
+    this->regVal = readRegisterSingle(ADXL345_TAP_AXES);
     if(suppress){
-        regVal |= (1<<ADXL345_SUPPRESS);
+        this->regVal |= (1<<ADXL345_SUPPRESS);
     }
     else{
-        regVal &= ~(1<<ADXL345_SUPPRESS);
+        this->regVal &= ~(1<<ADXL345_SUPPRESS);
     }
-    writeRegister(ADXL345_TAP_AXES, regVal);
+    writeToRegister(ADXL345_TAP_AXES, this->regVal);
     
-    regVal = static_cast<uint8_t>(round(window / 1.25));
-    writeRegister(ADXL345_WINDOW, regVal);
+    this->regVal = static_cast<uint8_t>(round(window / 1.25));
+    writeToRegister(ADXL345_WINDOW, this->regVal);
 }
 
 uint8_t ADXL345_WE::getActTapStatus(){
-    return readRegister8(ADXL345_ACT_TAP_STATUS);
+    return readRegisterSingle(ADXL345_ACT_TAP_STATUS);
 }
 
 uint8_t ADXL345_WE::getActTapStatusAsValue(){
-    uint8_t mask = (readRegister8(ADXL345_ACT_INACT_CTL)) & 0b01110000;
-    mask |= ((readRegister8(ADXL345_TAP_AXES)) & 0b00000111);
+    uint8_t mask = (readRegisterSingle(ADXL345_ACT_INACT_CTL)) & 0b01110000;
+    mask |= ((readRegisterSingle(ADXL345_TAP_AXES)) & 0b00000111);
         
-    regVal = getActTapStatus();
-    regVal &= mask;
-    return regVal;
+    this->regVal = getActTapStatus();
+    this->regVal &= mask;
+    return this->regVal;
 }
 
 String ADXL345_WE::getActTapStatusAsString(){
@@ -710,24 +744,24 @@ String ADXL345_WE::getActTapStatusAsString(){
 /************ FIFO ************/
 
 void ADXL345_WE::setFifoParameters(adxl345_triggerInt intNumber, uint8_t samples){
-    regVal = readRegister8(ADXL345_FIFO_CTL);
-    regVal &= 0b11000000;
-    regVal |= (samples-1);
+    this->regVal = readRegisterSingle(ADXL345_FIFO_CTL);
+    this->regVal &= 0b11000000;
+    this->regVal |= (samples-1);
     if(intNumber == ADXL345_TRIGGER_INT_2){
-        regVal |= 0x20;
+        this->regVal |= 0x20;
     }
-    writeRegister(ADXL345_FIFO_CTL, regVal);
+    writeToRegister(ADXL345_FIFO_CTL, this->regVal);
 }
 
 void ADXL345_WE::setFifoMode(adxl345_fifoMode mode){
-    regVal = readRegister8(ADXL345_FIFO_CTL);
-    regVal &= 0b00111111;
-    regVal |= (mode<<6);
-    writeRegister(ADXL345_FIFO_CTL,regVal);
+    this->regVal = readRegisterSingle(ADXL345_FIFO_CTL);
+    this->regVal &= 0b00111111;
+    this->regVal |= (mode<<6);
+    writeToRegister(ADXL345_FIFO_CTL, this->regVal);
 }
 
 uint8_t ADXL345_WE::getFifoStatus(){
-    return readRegister8(ADXL345_FIFO_STATUS);
+    return readRegisterSingle(ADXL345_FIFO_STATUS);
 }
 
 void ADXL345_WE::resetTrigger(){
@@ -740,11 +774,12 @@ void ADXL345_WE::resetTrigger(){
     private functions
 *************************************************/
 
-uint8_t ADXL345_WE::writeRegister(uint8_t reg, uint8_t val){
+// writeTo
+uint8_t ADXL345_WE::writeToRegister(uint8_t reg_addr, uint8_t val){
     if(!useSPI){
 #ifdef USE_I2C
         _wire->beginTransmission(i2cAddress);
-        _wire->write(reg);
+        _wire->write(reg_addr);
         _wire->write(val);
         return _wire->endTransmission();
 #endif
@@ -753,7 +788,7 @@ uint8_t ADXL345_WE::writeRegister(uint8_t reg, uint8_t val){
 #ifdef USE_SPI
         _spi->beginTransaction(mySPISettings);
         digitalWrite(csPin, LOW);
-        _spi->transfer(reg); 
+        _spi->transfer(reg_addr); 
         _spi->transfer(val);
         digitalWrite(csPin, HIGH);
         _spi->endTransaction();
@@ -762,12 +797,12 @@ uint8_t ADXL345_WE::writeRegister(uint8_t reg, uint8_t val){
     }
 }
   
-uint8_t ADXL345_WE::readRegister8(uint8_t reg){
+uint8_t ADXL345_WE::readRegisterSingle(uint8_t reg_addr){
     uint8_t regValue = 0;
     if(!useSPI){    
 #ifdef USE_I2C
         _wire->beginTransmission(i2cAddress);
-        _wire->write(reg);
+        _wire->write(reg_addr);
         _wire->endTransmission(false);
         _wire->requestFrom(i2cAddress, static_cast<uint8_t>(1));
         if(_wire->available()){
@@ -776,10 +811,10 @@ uint8_t ADXL345_WE::readRegister8(uint8_t reg){
 #endif
     }else{
 #ifdef USE_SPI
-        reg |= 0x80;
+        reg_addr |= 0x80;
         _spi->beginTransaction(mySPISettings);
         digitalWrite(csPin, LOW);
-        _spi->transfer(reg); 
+        _spi->transfer(reg_addr); 
         regValue = _spi->transfer(0x00);
         digitalWrite(csPin, HIGH);
         _spi->endTransaction();
@@ -788,24 +823,49 @@ uint8_t ADXL345_WE::readRegister8(uint8_t reg){
     return regValue;
 }
 
-void ADXL345_WE::readMultipleRegisters(uint8_t reg, uint8_t count, uint8_t *buf){
+// readFrom
+void ADXL345_WE::readFromRegisterMulti(uint8_t reg_addr, uint8_t count, uint8_t *buf){
     if(!useSPI){
 #ifdef USE_I2C
         _wire->beginTransmission(i2cAddress);
-        _wire->write(reg);
+        _wire->write(reg_addr);
         _wire->endTransmission(false);
         _wire->requestFrom(i2cAddress,count);
         for(int i=0; i<count; i++){
             buf[i] = _wire->read();
         }
+
+        /* todo OR
+         Wire.endTransmission();         // end transmission
+        Wire.beginTransmission(ADXL345_DEVICE); // start transmission to device
+        Wire.requestFrom(ADXL345_DEVICE, num);    // request 6 bytes from device
+        int i = 0;
+        while (Wire.available()) {      // device may send less than requested (abnormal)
+            _buff[i] = Wire.read();    // receive a byte
+            i++;
+            if (i > num) {
+                break;
+            }
+        }
+        if (i != num) {
+            status = ADXL345_ERROR;         // #define ADXL345_OK    0 // no error
+            error_code = ADXL345_READ_ERROR; // #define ADXL345_ERROR 1 // indicates error is predent
+        }
+        Wire.endTransmission();
+        
+        ? #define ADXL345_NO_ERROR   0 // initial state
+        ? #define ADXL345_READ_ERROR 1 // problem reading accel
+        ? #define ADXL345_BAD_ARG    2 // bad method argument 
+
+        */
 #endif
     }else{
 #ifdef USE_SPI
-        reg = reg | 0x80;
-        reg = reg | 0x40;
+        reg_addr = reg_addr | 0x80;
+        reg_addr = reg_addr | 0x40;
         _spi->beginTransaction(mySPISettings);
         digitalWrite(csPin, LOW);
-        _spi->transfer(reg); 
+        _spi->transfer(reg_addr); 
         for(int i=0; i<count; i++){
             buf[i] = _spi->transfer(0x00);
         }
@@ -815,4 +875,50 @@ void ADXL345_WE::readMultipleRegisters(uint8_t reg, uint8_t count, uint8_t *buf)
     }
 }
 
+ // print all register value to the serial ouptut, which requires it to be setup
+    // this can be used to manually to check the current configuration of the device
+void ADXL345_WE::printAllRegister() {
+    byte _b;
+    ADXL_PRINT("0x00: ");
+    readFromRegisterMulti(0x00, 1, &_b);
+    print_byte(_b);
+    int i;
+    for (i = 29; i <= 57; i++) {
+        ADXL_PRINT(" 0x");
+        ADXL_PRINT(i, HEX);
+        ADXL_PRINT(": ");
+        readFromRegisterMulti(i, 1, &_b);
+        print_byte(_b);
+    }
+}
 
+bool ADXL_WE::getRegisterBit(byte regAdress, int bitPos){
+    byte _b;
+    readFromRegisterMulti(regAdress, 1, &_b);
+    return ((_b >> bitPos) & 1);
+}
+
+void ADXL_WE::setRegisterBit(byte regAdress, int bitPos, bool state) {
+    byte _b;
+    readFromRegisterMulti(regAdress, 1, &_b);
+    if (state) {
+        _b |= (1 << bitPos);  // forces nth bit of _b to be 1.  all other bits left alone.
+    } else {
+        _b &= ~(1 << bitPos); // forces nth bit of _b to be 0.  all other bits left alone.
+    }
+    writeToRegister(regAdress, _b);
+}
+
+/*
+
+// read how many samples in Fifi
+https://github.com/Seeed-Studio/Accelerometer_ADXL345/blob/master/ADXL345.cpp#L59
+
+byte ADXL345::getFifoEntries(void) {
+    byte _b;
+    readFromRegisterMulti(ADXL345_FIFO_STATUS, 1, &_b);
+    _b &=  0b00111111;
+
+    return _b;
+}
+*/

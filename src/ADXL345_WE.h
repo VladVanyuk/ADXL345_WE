@@ -30,7 +30,7 @@
 
 #ifdef USE_I2C
 #include <Wire.h>
-#define ADXL345_I2CADDR 0x53
+#define ADXL345_I2CADDR_DEFAULT 0x53
 #define ADXL345_I2CADDR_HIGH 0x1D // if SDO = HIGH
 #endif
 
@@ -144,17 +144,26 @@ typedef struct {
     volatile float* g;    
 } xyzVectorG;
 
+// #define ADXL345_OK    1 // no error
+// #define ADXL345_ERROR 0 // indicates error is predent
+
 
 class ADXL345_WE
 {
     public: 
-        
+       // bool status;           // set when error occurs
+       // byte error_code;       // Initial state
+        // double gains[3];        // counts to Gs
+        // gains[0] = 0.00376390;
+    // gains[1] = 0.00376009;
+    // gains[2] = 0.00349265;
+
         /* Constructors */
         ADXL345_WE() : useSPI{false} {}
 #ifdef USE_I2C
-        ADXL345_WE(uint8_t addr) : _wire{&Wire}, i2cAddress{addr}, useSPI{false} {} //uint8_t addr = 0x53
+        ADXL345_WE(uint8_t addr) : _wire{&Wire}, i2cAddress{addr}, useSPI{false} {} 
         
-        ADXL345_WE(TwoWire *w, uint8_t addr = 0x53) : _wire{w}, i2cAddress{addr}, useSPI{false} {}
+        ADXL345_WE(TwoWire *w, uint8_t addr = ADXL345_I2CADDR_DEFAULT) : _wire{w}, i2cAddress{addr}, useSPI{false} {}
 #endif
 #ifdef USE_SPI
         ADXL345_WE(int cs, bool spi, int mosi = 999, int miso = 999, int sck = 999) 
@@ -164,12 +173,13 @@ class ADXL345_WE
             :  _spi{s}, csPin{cs}, useSPI{spi}, mosiPin{mosi}, misoPin{miso}, sckPin{sck} {}
 #endif
         /* registers */
-        
         static constexpr uint8_t ADXL345_DEVID            {0x00};
         static constexpr uint8_t ADXL345_THRESH_TAP       {0x1D}; 
+
         static constexpr uint8_t ADXL345_OFSX             {0x1E};
         static constexpr uint8_t ADXL345_OFSY             {0x1F};
         static constexpr uint8_t ADXL345_OFSZ             {0x20};
+
         static constexpr uint8_t ADXL345_DUR              {0x21};
         static constexpr uint8_t ADXL345_LATENT           {0x22};
         static constexpr uint8_t ADXL345_WINDOW           {0x23};
@@ -179,6 +189,7 @@ class ADXL345_WE
         static constexpr uint8_t ADXL345_ACT_INACT_CTL    {0x27};
         static constexpr uint8_t ADXL345_THRESH_FF        {0x28};
         static constexpr uint8_t ADXL345_TIME_FF          {0x29};
+        
         static constexpr uint8_t ADXL345_TAP_AXES         {0x2A};
         static constexpr uint8_t ADXL345_ACT_TAP_STATUS   {0x2B};
         static constexpr uint8_t ADXL345_BW_RATE          {0x2C};
@@ -186,25 +197,26 @@ class ADXL345_WE
         static constexpr uint8_t ADXL345_INT_ENABLE       {0x2E};
         static constexpr uint8_t ADXL345_INT_MAP          {0x2F};
         static constexpr uint8_t ADXL345_INT_SOURCE       {0x30};
-        //TODO ANALYZE
         static constexpr uint8_t ADXL345_DATA_FORMAT      {0x31};
+
         static constexpr uint8_t ADXL345_DATAX0           {0x32};
         static constexpr uint8_t ADXL345_DATAX1           {0x33};
         static constexpr uint8_t ADXL345_DATAY0           {0x34};
         static constexpr uint8_t ADXL345_DATAY1           {0x35};
         static constexpr uint8_t ADXL345_DATAZ0           {0x36};
         static constexpr uint8_t ADXL345_DATAZ1           {0x37};
+
         static constexpr uint8_t ADXL345_FIFO_CTL         {0x38};
         static constexpr uint8_t ADXL345_FIFO_STATUS      {0x39};
 
         /* Register bits */
-        
+
         static constexpr uint8_t ADXL345_FULL_RES         {0x03};
         static constexpr uint8_t ADXL345_SUPPRESS         {0x03};
         static constexpr uint8_t ADXL345_LOW_POWER        {0x04};
         
         /* Other */
-        
+
         static constexpr float MILLI_G_PER_LSB             {3.9};
         static constexpr float UNITS_PER_G              {256.41};// = 1/0.0039
     
@@ -318,11 +330,38 @@ class ADXL345_WE
         void setFifoMode(adxl345_fifoMode mode);
         uint8_t getFifoStatus();
         void resetTrigger();
-       
+
+        /** One adxl parameter functions */
+
+        // void setTapThreshold(int tapThreshold);
+        // int getTapThreshold();
+        // void setAxisGains(double* _gains);
+        // void getAxisGains(double* _gains);
+        // void setAxisOffset(int x, int y, int z);
+        // void getAxisOffset(int* x, int* y, int* z);
+        // void setTapDuration(int tapDuration);
+        // int getTapDuration();
+        // void setDoubleTapLatency(int doubleTapLatency);
+        // int getDoubleTapLatency();
+        // void setDoubleTapWindow(int doubleTapWindow);
+        // int getDoubleTapWindow();
+        // void setActivityThreshold(int activityThreshold);
+        // int getActivityThreshold();
+        // void setInactivityThreshold(int inactivityThreshold);
+        // int getInactivityThreshold();
+        // void setTimeInactivity(int timeInactivity);
+        // int getTimeInactivity();
+        // void setFreeFallThreshold(int freeFallthreshold);
+        // int getFreeFallThreshold();
+        // void setFreeFallDuration(int freeFallDuration);
+        // int getFreeFallDuration();
+
+        bool getSelfTestBit();
+        void setSelfTestBit(bool selfTestBit);
     protected:
 #ifdef USE_I2C
         TwoWire *_wire = nullptr;
-        uint8_t i2cAddress=ADXL345_I2CADDR;
+        uint8_t i2cAddress = ADXL345_I2CADDR_DEFAULT;
 #endif
 #ifdef USE_SPI
         SPIClass *_spi = nullptr;
@@ -335,18 +374,44 @@ class ADXL345_WE
         
         bool useSPI; 
  #ifdef USE_SPI   
-        int csPin;
-        int mosiPin;
-        int misoPin;
-        int sckPin;  
+        uint8_t csPin;
+        uint8_t mosiPin;
+        uint8_t misoPin;
+        uint8_t sckPin;  
  #endif   
         float rangeFactor;
-        uint8_t writeRegister(uint8_t reg, uint8_t val);
-        uint8_t readRegister8(uint8_t reg);
-        void readMultipleRegisters(uint8_t reg, uint8_t count, uint8_t *buf);
         bool adxl345_lowRes;
+        uint8_t writeToRegister(uint8_t reg, uint8_t val);
+        uint8_t readRegisterSingle(uint8_t reg_addr);
+        void readFromRegisterMulti(uint8_t reg_addr, uint8_t count, uint8_t *buf);
+        
+       bool getRegisterBit(byte regAdress, int bitPos);
+       void setRegisterBit(byte regAdress, int bitPos, bool state) ;
+    private:
+        void printAllRegister();
 };
 
 #endif
 
 
+/*
+// Reads the acceleration into three variable x, y and z
+void ADXL345::readAccel(int* xyz) {
+    readXYZ(xyz, xyz + 1, xyz + 2);
+}
+void ADXL345::readXYZ(int* x, int* y, int* z) {
+    readFrom(ADXL345_DATAX0, ADXL345_TO_READ, _buff); //read the acceleration data from the ADXL345
+    *x = (short)((((unsigned short)_buff[1]) << 8) | _buff[0]);
+    *y = (short)((((unsigned short)_buff[3]) << 8) | _buff[2]);
+    *z = (short)((((unsigned short)_buff[5]) << 8) | _buff[4]);
+}
+
+void ADXL345::getAcceleration(double* xyz) {
+    int i;
+    int xyz_int[3];
+    readAccel(xyz_int);
+    for (i = 0; i < 3; i++) {
+        xyz[i] = xyz_int[i] * gains[i];
+    }
+}
+*/
