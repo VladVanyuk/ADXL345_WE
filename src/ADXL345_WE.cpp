@@ -19,10 +19,15 @@
 #ifdef  ADXL345_DEBUG
     #define ADXL_PRINT(x) Serial.print(x)
     #define ADXL_PRINTLN(x) Serial.println(x)
+    #define ADXL_PRINT_BIN(x) Serial.print(x, BIN)
+    #define ADXL_PRINT_HEX(x) Serial.print(x, HEX)
 #else
     #define ADXL_PRINT(x)
     #define ADXL_PRINTLN(x)
+    #define ADXL_PRINT_BIN(x)
+    #define ADXL_PRINT_HEX(x)
 #endif
+
 
 #define ADXL345_TO_READ (6)      // num of bytes we are going to read each time (two bytes for each axis)
 
@@ -30,7 +35,7 @@ void print_byte(byte val) {
     int i;
     ADXL_PRINT("B");
     for (i = 7; i >= 0; i--) {
-        ADXL_PRINT(val >> i & 1, BIN);
+        ADXL_PRINT_BIN(val >> i & 1);
     }
 }
 
@@ -888,20 +893,20 @@ void ADXL345_WE::printAllRegister() {
     int i;
     for (i = 29; i <= 57; i++) {
         ADXL_PRINT(" 0x");
-        ADXL_PRINT(i, HEX);
+        ADXL_PRINT_HEX(i);
         ADXL_PRINT(": ");
         readFromRegisterMulti(i, 1, &_b);
         print_byte(_b);
     }
 }
 
-bool ADXL_WE::getRegisterBit(byte regAdress, int bitPos){
+bool ADXL345_WE::getRegisterBit(byte regAdress, int bitPos){
     byte _b;
     readFromRegisterMulti(regAdress, 1, &_b);
     return ((_b >> bitPos) & 1);
 }
 
-void ADXL_WE::setRegisterBit(byte regAdress, int bitPos, bool state) {
+void ADXL345_WE::setRegisterBit(byte regAdress, int bitPos, bool state) {
     byte _b;
     readFromRegisterMulti(regAdress, 1, &_b);
     if (state) {
