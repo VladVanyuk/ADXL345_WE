@@ -19,6 +19,9 @@
 #ifdef  ADXL345_DEBUG
     #define ADXL_PRINT(x) Serial.print(x)
     #define ADXL_PRINTLN(x) Serial.println(x)
+#else
+    #define ADXL_PRINT(x)
+    #define ADXL_PRINTLN(x)
 #endif
 
 #define ADXL345_TO_READ (6)      // num of bytes we are going to read each time (two bytes for each axis)
