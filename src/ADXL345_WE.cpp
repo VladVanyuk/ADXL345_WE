@@ -16,6 +16,8 @@
 
 #include "ADXL345_WE.h"
 
+// #define ADXL345_DEBUG 1
+
 #ifdef  ADXL345_DEBUG
     #define ADXL_PRINT(x) Serial.print(x)
     #define ADXL_PRINTLN(x) Serial.println(x)
@@ -216,7 +218,7 @@ void ADXL345_WE::setRange(adxl345_range range){
     }
     regValue &= 0b11111100;
     regValue |= range;
-    writeToRegister(ADXL345_DATA_FORMAT, this->regVal);
+    writeToRegister(ADXL345_DATA_FORMAT, regValue);
 }
 
 adxl345_range ADXL345_WE::getRange(){
@@ -842,7 +844,7 @@ void ADXL345_WE::readFromRegisterMulti(uint8_t reg_addr, uint8_t count, uint8_t 
         for(int i=0; i<count; i++){
             buf[i] = _wire->read();
         }
-
+        Wire.endTransmission();
         /* todo OR
          Wire.endTransmission();         // end transmission
         Wire.beginTransmission(ADXL345_DEVICE); // start transmission to device
