@@ -818,6 +818,7 @@ uint8_t ADXL345_WE::readRegisterSingle(uint8_t reg_addr){
         if(_wire->available()){
             regValue = _wire->read();
         }
+        Wire.endTransmission();
 #endif
     }else{
 #ifdef USE_SPI
@@ -846,7 +847,6 @@ void ADXL345_WE::readFromRegisterMulti(uint8_t reg_addr, uint8_t count, uint8_t 
         }
         Wire.endTransmission();
         /* todo OR
-         Wire.endTransmission();         // end transmission
         Wire.beginTransmission(ADXL345_DEVICE); // start transmission to device
         Wire.requestFrom(ADXL345_DEVICE, num);    // request 6 bytes from device
         int i = 0;
