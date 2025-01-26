@@ -287,6 +287,9 @@ public:
     String getRangeAsString();
 
     /* x,y,z results */
+    void readAccel(int* xyz); // todo move to private
+    void readXYZ(int* x, int* y, int* z); // todo move to private
+    void getAcceleration(double* xyz); // todo move to private
 
     xyzFloat getRawValues();
     xyzFloat getCorrectedRawValues();
@@ -441,28 +444,191 @@ protected:
     void setAngleOffsets(xyzFloat aos);
 private:
     void printAllRegister();
+     // DATA* registers
+        // void getAcceleration(int16_t* x, int16_t* y, int16_t* z);
+        // int16_t getAccelerationX();
+        // int16_t getAccelerationY();
+        // int16_t getAccelerationZ();
+   
 };
 
 #endif
 
-/*
-// Reads the acceleration into three variable x, y and z
-void ADXL345::readAccel(int* xyz) {
-    readXYZ(xyz, xyz + 1, xyz + 2);
+#if 0
+
+/** Get 3-axis accleration measurements.
+ * These six bytes (Register 0x32 to Register 0x37) are eight bits each and hold
+ * the output data for each axis. Register 0x32 and Register 0x33 hold the
+ * output data for the x-axis, Register 0x34 and Register 0x35 hold the output
+ * data for the y-axis, and Register 0x36 and Register 0x37 hold the output data
+ * for the z-axis. The output data is twos complement, with DATAx0 as the least
+ * significant byte and DATAx1 as the most significant byte, where x represent
+ * X, Y, or Z. The DATA_FORMAT register (Address 0x31) controls the format of
+ * the data. It is recommended that a multiple-byte read of all registers be
+ * performed to prevent a change in data between reads of sequential registers.
+ * 
+ * The DATA_FORMAT register controls the presentation of data to Register 0x32
+ * through Register 0x37. All data, except that for the +/-16 g range, must be
+ * clipped to avoid rollover.
+ *
+ * @param x 16-bit signed integer container for X-axis acceleration
+ * @param y 16-bit signed integer container for Y-axis acceleration
+ * @param z 16-bit signed integer container for Z-axis acceleration
+ * @see ADXL345_RA_DATAX0
+ */
+void ADXL345::getAcceleration(int16_t* x, int16_t* y, int16_t* z) {
+    I2Cdev::readBytes(devAddr, ADXL345_RA_DATAX0, 6, buffer);
+    *x = (((int16_t)buffer[1]) << 8) | buffer[0];
+    *y = (((int16_t)buffer[3]) << 8) | buffer[2];
+    *z = (((int16_t)buffer[5]) << 8) | buffer[4];
 }
-void ADXL345::readXYZ(int* x, int* y, int* z) {
-    readFrom(ADXL345_DATAX0, ADXL345_TO_READ, _buff); //read the acceleration data from the ADXL345
-    *x = (short)((((unsigned short)_buff[1]) << 8) | _buff[0]);
-    *y = (short)((((unsigned short)_buff[3]) << 8) | _buff[2]);
-    *z = (short)((((unsigned short)_buff[5]) << 8) | _buff[4]);
+/** Get X-axis accleration measurement.
+ * @return 16-bit signed X-axis acceleration value
+ * @see ADXL345_RA_DATAX0
+ */
+int16_t ADXL345::getAccelerationX() {
+    I2Cdev::readBytes(devAddr, ADXL345_RA_DATAX0, 2, buffer);
+    return (((int16_t)buffer[1]) << 8) | buffer[0];
+}
+/** Get Y-axis accleration measurement.
+ * @return 16-bit signed Y-axis acceleration value
+ * @see ADXL345_RA_DATAY0
+ */
+int16_t ADXL345::getAccelerationY() {
+    I2Cdev::readBytes(devAddr, ADXL345_RA_DATAY0, 2, buffer);
+    return (((int16_t)buffer[1]) << 8) | buffer[0];
+}
+/** Get Z-axis accleration measurement.
+ * @return 16-bit signed Z-axis acceleration value
+ * @see ADXL345_RA_DATAZ0
+ */
+int16_t ADXL345::getAccelerationZ() {
+    I2Cdev::readBytes(devAddr, ADXL345_RA_DATAZ0, 2, buffer);
+    return (((int16_t)buffer[1]) << 8) | buffer[0];
 }
 
-void ADXL345::getAcceleration(double* xyz) {
-    int i;
-    int xyz_int[3];
-    readAccel(xyz_int);
-    for (i = 0; i < 3; i++) {
-        xyz[i] = xyz_int[i] * gains[i];
-    }
+
+
+
+/** Read multiple bytes from an 8-bit device register.
+ * @param devAddr I2C slave device address
+ * @param regAddr First register regAddr to read from
+ * @param length Number of bytes to read
+ * @param data Buffer to store read data in
+ * @param timeout Optional read timeout in milliseconds (0 to disable, leave off to use default class value in I2Cdev::readTimeout)
+ * @return Number of bytes read (-1 indicates failure)
+ */
+int8_t I2Cdev::readBytes(uint8_t devAddr, uint8_t regAddr, uint8_t length, uint8_t *data, uint16_t timeout, void *wireObj) {
+    #ifdef I2CDEV_SERIAL_DEBUG
+        Serial.print("I2C (0x");
+        Serial.print(devAddr, HEX);
+        Serial.print(") reading ");
+        Serial.print(length, DEC);
+        Serial.print(" bytes from 0x");
+        Serial.print(regAddr, HEX);
+        Serial.print("...");
+    #endif
+
+    int8_t count = 0;
+    uint32_t t1 = millis();
+
+    #if (I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE || I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_SBWIRE || I2CDEV_IMPLEMENTATION == I2CDEV_TEENSY_3X_WIRE)
+        TwoWire *useWire = &Wire;
+        if (wireObj) useWire = (TwoWire *)wireObj;
+
+        #if (ARDUINO < 100)
+            // Arduino v00xx (before v1.0), Wire library
+
+            // I2C/TWI subsystem uses internal buffer that breaks with large data requests
+            // so if user requests more than I2CDEVLIB_WIRE_BUFFER_LENGTH bytes, we have to do it in
+            // smaller chunks instead of all at once
+            for (int k = 0; k < length; k += min((int)length, I2CDEVLIB_WIRE_BUFFER_LENGTH)) {
+                useWire->beginTransmission(devAddr);
+                useWire->send(regAddr);
+                useWire->endTransmission();
+                useWire->beginTransmission(devAddr);
+                useWire->requestFrom((uint8_t)devAddr, (uint8_t)min((int)length - k, I2CDEVLIB_WIRE_BUFFER_LENGTH));
+
+                for (; useWire->available() && (timeout == 0 || millis() - t1 < timeout); count++) {
+                    data[count] = useWire->receive();
+                    #ifdef I2CDEV_SERIAL_DEBUG
+                        Serial.print(data[count], HEX);
+                        if (count + 1 < length) Serial.print(" ");
+                    #endif
+                }
+
+                useWire->endTransmission();
+            }
+        #elif (ARDUINO == 100)
+            // Arduino v1.0.0, Wire library
+            // Adds standardized write() and read() stream methods instead of send() and receive()
+
+            // I2C/TWI subsystem uses internal buffer that breaks with large data requests
+            // so if user requests more than I2CDEVLIB_WIRE_BUFFER_LENGTH bytes, we have to do it in
+            // smaller chunks instead of all at once
+            for (int k = 0; k < length; k += min((int)length, I2CDEVLIB_WIRE_BUFFER_LENGTH)) {
+                useWire->beginTransmission(devAddr);
+                useWire->write(regAddr);
+                useWire->endTransmission();
+                useWire->beginTransmission(devAddr);
+                useWire->requestFrom((uint8_t)devAddr, (uint8_t)min((int)length - k, I2CDEVLIB_WIRE_BUFFER_LENGTH));
+        
+                for (; useWire->available() && (timeout == 0 || millis() - t1 < timeout); count++) {
+                    data[count] = useWire->read();
+                    #ifdef I2CDEV_SERIAL_DEBUG
+                        Serial.print(data[count], HEX);
+                        if (count + 1 < length) Serial.print(" ");
+                    #endif
+                }
+        
+                useWire->endTransmission();
+            }
+        #elif (ARDUINO > 100)
+            // Arduino v1.0.1+, Wire library
+            // Adds official support for repeated start condition, yay!
+
+            // I2C/TWI subsystem uses internal buffer that breaks with large data requests
+            // so if user requests more than I2CDEVLIB_WIRE_BUFFER_LENGTH bytes, we have to do it in
+            // smaller chunks instead of all at once
+            for (int k = 0; k < length; k += min((int)length, I2CDEVLIB_WIRE_BUFFER_LENGTH)) {
+                useWire->beginTransmission(devAddr);
+                useWire->write(regAddr);
+                useWire->endTransmission();
+                useWire->beginTransmission(devAddr);
+                useWire->requestFrom((uint8_t)devAddr, (uint8_t)min((int)length - k, I2CDEVLIB_WIRE_BUFFER_LENGTH));
+        
+                for (; useWire->available() && (timeout == 0 || millis() - t1 < timeout); count++) {
+                    data[count] = useWire->read();
+                    #ifdef I2CDEV_SERIAL_DEBUG
+                        Serial.print(data[count], HEX);
+                        if (count + 1 < length) Serial.print(" ");
+                    #endif
+                }
+            }
+        #endif
+
+    #elif (I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE)
+
+        // Fastwire library
+        // no loop required for fastwire
+        uint8_t status = Fastwire::readBuf(devAddr << 1, regAddr, data, length);
+        if (status == 0) {
+            count = length; // success
+        } else {
+            count = -1; // error
+        }
+
+    #endif
+
+    // check for timeout
+    if (timeout > 0 && millis() - t1 >= timeout && count < length) count = -1; // timeout
+
+    #ifdef I2CDEV_SERIAL_DEBUG
+        Serial.print(". Done (");
+        Serial.print(count, DEC);
+        Serial.println(" read).");
+    #endif
+
+    return count;
 }
-*/
+#endif

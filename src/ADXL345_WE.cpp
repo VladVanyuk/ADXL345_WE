@@ -1149,3 +1149,29 @@ byte ADXL345::getFifoEntries(void) {
     return _b;
 }
 */
+
+
+void ADXL345_WE::readAccel(int* xyz) {
+    readXYZ(xyz, xyz + 1, xyz + 2);
+}
+
+void ADXL345_WE::readXYZ(int* x, int* y, int* z) {
+    uint8_t rawData[ADXL345_TO_READ];
+    readFromRegisterMulti(ADXL345_DATAX0, ADXL345_TO_READ, rawData); //read the acceleration data from the ADXL345
+    *x = (short)((((unsigned short)rawData[1]) << 8) | rawData[0]);
+    *y = (short)((((unsigned short)rawData[3]) << 8) | rawData[2]);
+    *z = (short)((((unsigned short)rawData[5]) << 8) | rawData[4]);
+}
+
+void ADXL345_WE::getAcceleration(double* xyz) {
+    int i;
+    int xyz_int[3];
+    readAccel(xyz_int);
+      double gains[3];        // counts to Gs
+    gains[0] = 0.00376390;
+    gains[1] = 0.00376009;
+    gains[2] = 0.00349265;
+    for (i = 0; i < 3; i++) {
+        xyz[i] = xyz_int[i] * gains[i];
+    }
+}
