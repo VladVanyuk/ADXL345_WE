@@ -301,9 +301,8 @@ public:
 
     /* Angles and Orientation */
 
-    void measureAngleOffsets();
+    void measureAngleOffsets(xyzFloat * aos = nullptr);
     xyzFloat getAngleOffsets();
-    void setAngleOffsets(xyzFloat aos);
     adxl345_orientation getOrientation();
     String getOrientationAsString();
     float getPitch();
@@ -439,6 +438,7 @@ protected:
     bool getRegisterBit(byte regAdress, int bitPos);
     void setRegisterBit(byte regAdress, int bitPos, bool state);
 
+    void setAngleOffsets(xyzFloat aos);
 private:
     void printAllRegister();
 };

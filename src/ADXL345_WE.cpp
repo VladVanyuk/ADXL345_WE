@@ -461,11 +461,6 @@ xyzFloat ADXL345_WE::getCorrAngles()
 
 /************ Angles and Orientation ************/
 
-void ADXL345_WE::measureAngleOffsets()
-{
-    angleOffsetVal = getAngles();
-}
-
 xyzFloat ADXL345_WE::getAngleOffsets()
 {
     return angleOffsetVal;
@@ -473,7 +468,22 @@ xyzFloat ADXL345_WE::getAngleOffsets()
 
 void ADXL345_WE::setAngleOffsets(xyzFloat aos)
 {
-    angleOffsetVal = aos;
+    this->angleOffsetVal = aos;
+}
+
+void ADXL345_WE::measureAngleOffsets(xyzFloat * aos)
+{
+    if (aos)
+    {
+        *aos = getAngles();
+        setAngleOffsets(*aos);
+    }
+    else
+    {
+        // angleOffsetVal = getAngles();
+        setAngleOffsets(getAngles());
+    }
+    
 }
 
 adxl345_orientation ADXL345_WE::getOrientation()
