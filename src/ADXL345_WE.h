@@ -44,6 +44,9 @@
 
 /* Definitions */
 
+// #define ADXL345_DEVID 0xE5
+#define MAX_ADXL_BUFF_SIZE 32U
+
 constexpr uint8_t INT_PIN_1{0x01};
 constexpr uint8_t INT_PIN_2{0x02};
 constexpr uint8_t ADXL345_ACT_LOW{0x01};
@@ -370,7 +373,7 @@ public:
      *             ADXL345_TRIGGER
      *    2. FIFO samples (max 32). Defines the size of the FIFO. @note One sample is an x,y,z triple.
      */
-    void setFifoParameters(adxl345_triggerInt intNumber, uint8_t samples);
+    void setFifoParameters(adxl345_triggerInt intNumber, uint8_t samples=32);
 
     /** Choose the following FIFO modes:
      *    ADXL345_FIFO     -  you choose the start, ends when FIFO is full (at defined limit)

@@ -947,6 +947,11 @@ String ADXL345_WE::getActTapStatusAsString()
 
 void ADXL345_WE::setFifoParameters(adxl345_triggerInt intNumber, uint8_t samples)
 {
+    if (samples > MAX_ADXL_BUFF_SIZE)
+    {
+        samples = MAX_ADXL_BUFF_SIZE;
+    }
+
     this->regVal = readRegisterSingle(ADXL345_FIFO_CTL);
     this->regVal &= 0b11000000;
     this->regVal |= (samples - 1);
