@@ -322,9 +322,11 @@
      void getAcceleration(double* xyz); // todo move to private
  
      xyzFloat getRawValues();
+     void getRawValues(xyzFloat *rawVal);
      xyzFloat getCorrectedRawValues();
+     void getCorrectedRawValues(xyzFloat *rawVal);
      xyzFloat getGValues();
-     float getVectorG();
+     void getGValues(xyzFloat *gVal);     float getVectorG();
      float getVectorG(xyzVectorG *gVal);
      // float getVectorG(float *x, float *y, float *z);
  

@@ -379,7 +379,15 @@ bool ADXL345_WE::checkConnection()
  
      return rawVal;
  }
- 
+ void ADXL345_WE::getRawValues(xyzFloat *rawVal){
+    // uint8_t rawData[ADXL345_TO_READ]; 
+    // readMultipleRegisters(ADXL345_DATAX0, ADXL345_TO_READ, rawData);
+    // rawVal->x = (static_cast<int16_t>((rawData[1] << 8) | rawData[0])) * 1.0;
+    // rawVal->y = (static_cast<int16_t>((rawData[3] << 8) | rawData[2])) * 1.0;
+    // rawVal->z = (static_cast<int16_t>((rawData[5] << 8) | rawData[4])) * 1.0;
+    *rawVal = getRawValues();
+}
+
  xyzFloat ADXL345_WE::getCorrectedRawValues()
  {
      uint8_t rawData[ADXL345_TO_READ];
@@ -396,6 +404,18 @@ bool ADXL345_WE::checkConnection()
      return rawVal;
  }
  
+ void ADXL345_WE::getCorrectedRawValues(xyzFloat *rawVal){
+    // uint8_t rawData[ADXL345_TO_READ]; 
+    // readFromRegisterMulti(ADXL345_DATAX0, ADXL345_TO_READ, rawData);
+    // int16_t xRaw = static_cast<int16_t>(rawData[1] << 8) | rawData[0];
+    // int16_t yRaw = static_cast<int16_t>(rawData[3] << 8) | rawData[2];
+    // int16_t zRaw = static_cast<int16_t>(rawData[5] << 8) | rawData[4];
+        
+    // rawVal->x = xRaw * 1.0 - (offsetVal.x / rangeFactor);
+    // rawVal->y = yRaw * 1.0 - (offsetVal.y / rangeFactor);
+    // rawVal->z = zRaw * 1.0 - (offsetVal.z / rangeFactor);
+    *rawVal = getCorrectedRawValues();
+}
  xyzFloat ADXL345_WE::getGValues()
  {
      xyzFloat rawVal = getCorrectedRawValues();
@@ -405,6 +425,15 @@ bool ADXL345_WE::checkConnection()
      gVal.z = rawVal.z * MILLI_G_PER_LSB * rangeFactor * corrFact.z / 1000.0;
      return gVal;
  }
+
+ void ADXL345_WE::getGValues(xyzFloat *gVal){
+    // getCorrectedRawValues(&rawVal);
+    // xyzFloat rawVal = getCorrectedRawValues();
+    // gVal->x = rawVal.x * corrFact.x * MILLI_G_PER_LSB * rangeFactor / 1000.0; 
+    // gVal->y = rawVal.y * corrFact.y * MILLI_G_PER_LSB * rangeFactor / 1000.0; 
+    // gVal->z = rawVal.z * corrFact.z * MILLI_G_PER_LSB * rangeFactor / 1000.0; 
+    *gVal = getGValues();
+}
  
  float ADXL345_WE::getVectorG()
  {
