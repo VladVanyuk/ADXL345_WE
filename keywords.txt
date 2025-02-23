@@ -83,10 +83,12 @@ setGeneralTapParameters	KEYWORD2
 setAdditionalDoubleTapParameters	KEYWORD2
 getActTapStatus	KEYWORD2
 getActTapStatusAsString	KEYWORD2
+getActTapStatusAsValue	KEYWORD2
 setFifoParameters	KEYWORD2
 setFifoMode	KEYWORD2
 getFifoStatus	KEYWORD2
 resetTrigger	KEYWORD2
+isLowPower	KEYWORD2
 
 #######################################
 # Constants (LITERAL1)
@@ -163,4 +165,4 @@ ADXL345_TRIGGER_INT_2	LITERAL1
 INT_PIN_1	LITERAL1
 INT_PIN_2	LITERAL1
 ADXL345_ACT_LOW	LITERAL1
-ADXL345_ACT_HIGH	LITERAL1	
+ADXL345_ACT_HIGH	LITERAL1
