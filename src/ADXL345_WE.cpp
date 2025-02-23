@@ -14,6 +14,8 @@
  *
  *********************************************************************/
 
+ #include "Arduino.h"
+
  #include "ADXL345_WE.h"
 
  // #define ADXL345_DEBUG 1
@@ -129,6 +131,18 @@
  }
  
  
+/**
+ * @brief Power ON
+ */
+// void FaBo3Axis::powerOn()
+// {
+//   uint8_t power = ADXL345_AUTO_SLEEP_OFF;
+//   power |= ADXL345_MEASURE_ON;
+//   power |= ADXL345_SLEEP_OFF;
+//   power |= ADXL345_WAKEUP_8HZ;
+//   writeI2c(ADXL345_POWER_CTL_REG, power);
+// }
+
  /**************************************************************************/
  /*!
      @brief  Reads the device ID (can be used to check connection)
@@ -140,6 +154,15 @@
      return readRegisterSingle(ADXL345_DEVID);
    }
  
+bool ADXL345_WE::checkConnection()
+   {
+    uint8_t deviceid = getDeviceID();
+    if (deviceid != ADXL345_DEVICE) {
+    /* No ADXL345 detected ... return false */
+        return false;
+    }
+    return true;
+   }
    
  #ifdef USE_I2C
  void ADXL345_WE::setWire(TwoWire *w)
@@ -749,7 +772,9 @@
      return this->regVal;
  }
  
- bool ADXL345_WE::checkInterrupt(uint8_t source, adxl345_int type)
+ // TODO RENAMETO if (adxl.triggered(intEvent, ADXL345_WATERMARK)) { // if watermark interrupt occured
+
+ bool ADXL345_WE::checkInterrupt(uint8_t source, adxl345_int type) 
  {
      source &= (1 << type);
      return source;
@@ -987,13 +1012,32 @@
  {
      return readRegisterSingle(ADXL345_FIFO_STATUS);
  }
- 
+
  void ADXL345_WE::resetTrigger()
  {
      setFifoMode(ADXL345_BYPASS);
      setFifoMode(ADXL345_TRIGGER);
  }
  
+// getFifoEntries OR getFifoSize
+byte ADXL345_WE::getFifoSize(void) {
+    byte _b;
+    readFromRegisterMulti(ADXL345_FIFO_STATUS, 1, &_b);
+    _b &=  0b00111111; //MASK FOR CURRENT SIZE OF FIFO BUFFER
+    return _b;
+}
+
+
+void ADXL345_WE::burstReadXYZ(float* x, float* y, float* z, byte samples) {
+    for (int i = 0; i < samples; i++) {
+        xyzFloat rawData = getRawValues();
+        x[i] = rawData.x;
+        y[i] = rawData.y;
+        z[i] = rawData.z;
+        ADXL_PRINT("Sample "); ADXL_PRINT(i); ADXL_PRINTLN(": X="); ADXL_PRINT(x[i]); ADXL_PRINT(" Y="); ADXL_PRINT(y[i]); ADXL_PRINT(" Z="); ADXL_PRINT(z[i]);
+    }
+}
+
  /************************************************
      private functions
  *************************************************/
@@ -1115,23 +1159,26 @@
  
  // print all register value to the serial ouptut, which requires it to be setup
  // this can be used to manually to check the current configuration of the device
- void ADXL345_WE::printAllRegister()
- {
-     byte _b;
-     ADXL_PRINT("0x00: ");
-     readFromRegisterMulti(0x00, 1, &_b);
-     print_byte(_b);
-     int i;
-     for (i = 29; i <= 57; i++)
-     {
-         ADXL_PRINT(" 0x");
-         ADXL_PRINT_HEX(i);
-         ADXL_PRINT(": ");
-         readFromRegisterMulti(i, 1, &_b);
-         print_byte(_b);
-     }
- }
  
+
+void ADXL345_WE::printAllRegister() {
+	byte _b;
+	Serial.print("0x00: ");
+	readFromRegisterMulti(ADXL345_DEVID, 1, &_b);
+//	print_byte(_b);
+//	Serial.println("");
+	int i;
+	for (i=29;i<=57;i++){
+        //todo add adxl debug macro
+		// Serial.print("0x");
+		// Serial.print(i, HEX);
+		// Serial.print(": ");
+		readFromRegisterMulti(i, 1, &_b);
+	//	print_byte(_b);
+	//	Serial.println("");
+	}
+}
+
  bool ADXL345_WE::getRegisterBit(byte regAdress, int bitPos)
  {
      byte _b;

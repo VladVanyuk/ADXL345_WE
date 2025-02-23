@@ -251,6 +251,7 @@
  #endif
      /* registers */
      static constexpr uint8_t ADXL345_DEVID{0x00};
+     static constexpr uint8_t ADXL345_DEVICE{0xE5};
      static constexpr uint8_t ADXL345_THRESH_TAP{0x1D};
      static constexpr uint8_t ADXL345_OFSX{0x1E};
      static constexpr uint8_t ADXL345_OFSY{0x1F};
@@ -296,6 +297,8 @@
  
      bool init();
      uint8_t getDeviceID(void);
+     bool checkConnection();
+
  
  #ifdef USE_I2C
      void setWire(TwoWire *w);
@@ -399,7 +402,11 @@
       *    2. FIFO samples (max 32). Defines the size of the FIFO. @note One sample is an x,y,z triple.
       */
      void setFifoParameters(adxl345_triggerInt intNumber, uint8_t samples=32);
- 
+    
+    //  uint8_t getFifoSize(void);
+    byte getFifoSize(void);
+     void burstReadXYZ(float* x, float* y, float* z, byte samples);  // burst read function for getting all samples from fifo
+
      /** Choose the following FIFO modes:
       *    ADXL345_FIFO     -  you choose the start, ends when FIFO is full (at defined limit)
       *    ADXL345_STREAM   -  FIFO always filled with new data, old data replaced if FIFO is full; you choose the stop
