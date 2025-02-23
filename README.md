@@ -45,3 +45,22 @@ My library has implemented SPI 4-Wire. Some modules have SDO connected GND via a
 
 Another SPI issue might occur when using ESP8266 boards like the WEMOS D1 mini or NodeMCU. The standard CS Pin (e.g. D8/GPIO15 on a WEMOS D1 mini or NodeMCU) might not work since the CS Pin on most ADXL345 modules has a pull-up resistor. And if D8 is high at reset, the ESP8266 will not boot. In that case choose a different ESP8266 pin as CS!  
 
+
+https://www.nxp.com/docs/en/application-note/AN3461.pdf
+If the ADXL345 is used with the default settings, a resolution of 10 bit and a range of ±2g(=a range of 4g), the following formula can be used:
+
+Value in G = Measurement Value * (G-range/(2^Resolution))
+Value in G = Measurement Value * (4/(2^10)) = Measurement Value * (4/1024) = Measurement Value * (1/256) = Measurement Value * 0.0039
+
+This calculation must be done for each axis separately. The resulting values are expected to be within ±1g.
+xg = valX * 0.0039;
+yg = valY * 0.0039;
+zg = valZ * 0.0039;
+
+fXg = xg * alpha + fXg * (1.0 - alpha);
+fYg = yg * alpha + fYg * (1.0 - alpha);
+fZg = zg * alpha + fZg * (1.0 - alpha);
+
+Having calculated the x, y and z values in g, these can be used to further calculate the angles. Based on the aircraft principal axes, the rotation about the X-axis is called roll, the rotation about the Y-axis is called pitch. Additional the rotation about the Z-axis would be called yaw, but an 3-axis accelerometer is not able to measure it, as the force vector of gravity does not change during the movement.
+Roll = atan2(yg, zg) * 180/PI;
+Pitch = atan2(-xg, sqrt(yg*yg + zg*zg)) * 180/PI;
