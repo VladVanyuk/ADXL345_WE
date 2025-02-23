@@ -14,6 +14,9 @@
  *
  *********************************************************************/
 
+ #include "Arduino.h"
+
+ #include "ADXL345_WE.h"
  #include "ADXL345_WE.h"
 
  // #define ADXL345_DEBUG 1
@@ -92,9 +95,15 @@
      writeToRegister(ADXL345_POWER_CTL, 16);
      setMeasureMode(true);
      rangeFactor = 1.0;
-     corrFact = {1.0, 1.0, 1.0};
-     offsetVal = {0.0, 0.0, 0.0};
-     angleOffsetVal = {0.0, 0.0, 0.0};
+     corrFact.x = 1.0;
+     corrFact.y = 1.0;
+     corrFact.z = 1.0;
+     offsetVal.x = 0.0;
+     offsetVal.y = 0.0;
+     offsetVal.z = 0.0;
+     angleOffsetVal.x = 0.0;
+     angleOffsetVal.y = 0.0;
+     angleOffsetVal.z = 0.0;
      writeToRegister(ADXL345_DATA_FORMAT, 0);
      setFullRes(true);
      uint8_t ctrlVal = readRegisterSingle(ADXL345_DATA_FORMAT);
@@ -122,6 +131,40 @@
      return true;
  }
  
+ 
+/**
+ * @brief Power ON
+ */
+// void FaBo3Axis::powerOn()
+// {
+//   uint8_t power = ADXL345_AUTO_SLEEP_OFF;
+//   power |= ADXL345_MEASURE_ON;
+//   power |= ADXL345_SLEEP_OFF;
+//   power |= ADXL345_WAKEUP_8HZ;
+//   writeI2c(ADXL345_POWER_CTL_REG, power);
+// }
+
+ /**************************************************************************/
+ /*!
+     @brief  Reads the device ID (can be used to check connection)
+     @return The Device ID of the connected sensor
+ */
+ /**************************************************************************/
+ uint8_t ADXL345_WE::getDeviceID(void) {
+     // Check device ID register
+     return readRegisterSingle(ADXL345_DEVID);
+   }
+ 
+bool ADXL345_WE::checkConnection()
+   {
+    uint8_t deviceid = getDeviceID();
+    if (deviceid != ADXL345_DEVICE) {
+    /* No ADXL345 detected ... return false */
+        return false;
+    }
+    return true;
+   }
+   
  #ifdef USE_I2C
  void ADXL345_WE::setWire(TwoWire *w)
  {
@@ -337,15 +380,6 @@
  
      return rawVal;
  }
-
- void ADXL345_WE::getRawValues(xyzFloat *rawVal){
-    // uint8_t rawData[ADXL345_TO_READ]; 
-    // readMultipleRegisters(ADXL345_DATAX0, ADXL345_TO_READ, rawData);
-    // rawVal->x = (static_cast<int16_t>((rawData[1] << 8) | rawData[0])) * 1.0;
-    // rawVal->y = (static_cast<int16_t>((rawData[3] << 8) | rawData[2])) * 1.0;
-    // rawVal->z = (static_cast<int16_t>((rawData[5] << 8) | rawData[4])) * 1.0;
-    *rawVal = getRawValues();
-}
  
  xyzFloat ADXL345_WE::getCorrectedRawValues()
  {
@@ -363,21 +397,6 @@
      return rawVal;
  }
  
- void ADXL345_WE::getCorrectedRawValues(xyzFloat *rawVal){
-     // uint8_t rawData[ADXL345_TO_READ]; 
-     // readFromRegisterMulti(ADXL345_DATAX0, ADXL345_TO_READ, rawData);
-     // int16_t xRaw = static_cast<int16_t>(rawData[1] << 8) | rawData[0];
-     // int16_t yRaw = static_cast<int16_t>(rawData[3] << 8) | rawData[2];
-     // int16_t zRaw = static_cast<int16_t>(rawData[5] << 8) | rawData[4];
-         
-     // rawVal->x = xRaw * 1.0 - (offsetVal.x / rangeFactor);
-     // rawVal->y = yRaw * 1.0 - (offsetVal.y / rangeFactor);
-     // rawVal->z = zRaw * 1.0 - (offsetVal.z / rangeFactor);
-     *rawVal = getCorrectedRawValues();
- }
- 
- 
- 
  xyzFloat ADXL345_WE::getGValues()
  {
      xyzFloat rawVal = getCorrectedRawValues();
@@ -387,17 +406,6 @@
      gVal.z = rawVal.z * MILLI_G_PER_LSB * rangeFactor * corrFact.z / 1000.0;
      return gVal;
  }
- 
- 
- void ADXL345_WE::getGValues(xyzFloat *gVal){
-     // getCorrectedRawValues(&rawVal);
-     // xyzFloat rawVal = getCorrectedRawValues();
-     // gVal->x = rawVal.x * corrFact.x * MILLI_G_PER_LSB * rangeFactor / 1000.0; 
-     // gVal->y = rawVal.y * corrFact.y * MILLI_G_PER_LSB * rangeFactor / 1000.0; 
-     // gVal->z = rawVal.z * corrFact.z * MILLI_G_PER_LSB * rangeFactor / 1000.0; 
-     *gVal = getGValues();
- }
- 
  
  float ADXL345_WE::getVectorG()
  {
@@ -765,7 +773,9 @@
      return this->regVal;
  }
  
- bool ADXL345_WE::checkInterrupt(uint8_t source, adxl345_int type)
+ // TODO RENAMETO if (adxl.triggered(intEvent, ADXL345_WATERMARK)) { // if watermark interrupt occured
+
+ bool ADXL345_WE::checkInterrupt(uint8_t source, adxl345_int type) 
  {
      source &= (1 << type);
      return source;
@@ -976,24 +986,10 @@
  
  void ADXL345_WE::setFifoParameters(adxl345_triggerInt intNumber, uint8_t samples)
  {
-
-    /*
-     regVal = readRegister8(ADXL345_FIFO_CTL);
-    regVal &= 0b11000000;
-    regVal |= (samples-1);
-    if(intNumber == ADXL345_TRIGGER_INT_2){
-        regVal |= 0x20;
-    }
-    writeRegister(ADXL345_FIFO_CTL, regVal);
-    */
      if (samples > MAX_ADXL_BUFF_SIZE)
      {
          samples = MAX_ADXL_BUFF_SIZE;
-     }else if(samples == 0)
-     {
-         samples = 1;
      }
- 
  
      this->regVal = readRegisterSingle(ADXL345_FIFO_CTL);
      this->regVal &= 0b11000000;
@@ -1017,13 +1013,32 @@
  {
      return readRegisterSingle(ADXL345_FIFO_STATUS);
  }
- 
+
  void ADXL345_WE::resetTrigger()
  {
      setFifoMode(ADXL345_BYPASS);
      setFifoMode(ADXL345_TRIGGER);
  }
  
+// getFifoEntries OR getFifoSize
+byte ADXL345_WE::getFifoSize(void) {
+    byte _b;
+    readFromRegisterMulti(ADXL345_FIFO_STATUS, 1, &_b);
+    _b &=  0b00111111; //MASK FOR CURRENT SIZE OF FIFO BUFFER
+    return _b;
+}
+
+
+void ADXL345_WE::burstReadXYZ(float* x, float* y, float* z, byte samples) {
+    for (int i = 0; i < samples; i++) {
+        xyzFloat rawData = getRawValues();
+        x[i] = rawData.x;
+        y[i] = rawData.y;
+        z[i] = rawData.z;
+        ADXL_PRINT("Sample "); ADXL_PRINT(i); ADXL_PRINTLN(": X="); ADXL_PRINT(x[i]); ADXL_PRINT(" Y="); ADXL_PRINT(y[i]); ADXL_PRINT(" Z="); ADXL_PRINT(z[i]);
+    }
+}
+
  /************************************************
      private functions
  *************************************************/
@@ -1068,7 +1083,7 @@
          {
              regValue = _wire->read();
          }
-       //  _wire->endTransmission();
+         Wire.endTransmission();
  #endif
      }
      else
@@ -1100,8 +1115,7 @@
          {
              buf[i] = _wire->read();
          }
-       //  _wire->endTransmission();
- 
+         Wire.endTransmission();
          /* todo OR
          Wire.beginTransmission(ADXL345_DEVICE); // start transmission to device
          Wire.requestFrom(ADXL345_DEVICE, num);    // request 6 bytes from device
@@ -1146,23 +1160,26 @@
  
  // print all register value to the serial ouptut, which requires it to be setup
  // this can be used to manually to check the current configuration of the device
- void ADXL345_WE::printAllRegister()
- {
-     byte _b;
-     ADXL_PRINT("0x00: ");
-     readFromRegisterMulti(0x00, 1, &_b);
-     print_byte(_b);
-     int i;
-     for (i = 29; i <= 57; i++)
-     {
-         ADXL_PRINT(" 0x");
-         ADXL_PRINT_HEX(i);
-         ADXL_PRINT(": ");
-         readFromRegisterMulti(i, 1, &_b);
-         print_byte(_b);
-     }
- }
  
+
+void ADXL345_WE::printAllRegister() {
+	byte _b;
+	Serial.print("0x00: ");
+	readFromRegisterMulti(ADXL345_DEVID, 1, &_b);
+//	print_byte(_b);
+//	Serial.println("");
+	int i;
+	for (i=29;i<=57;i++){
+        //todo add adxl debug macro
+		// Serial.print("0x");
+		// Serial.print(i, HEX);
+		// Serial.print(": ");
+		readFromRegisterMulti(i, 1, &_b);
+	//	print_byte(_b);
+	//	Serial.println("");
+	}
+}
+
  bool ADXL345_WE::getRegisterBit(byte regAdress, int bitPos)
  {
      byte _b;
@@ -1224,3 +1241,6 @@
          xyz[i] = xyz_int[i] * gains[i];
      }
  }
+ 
+ 
+   

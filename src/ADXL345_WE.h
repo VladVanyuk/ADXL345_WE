@@ -3,19 +3,26 @@
  * This is a library for the ADXL345 accelerometer.
  *
  * You'll find several example sketches which should enable you to use the library.
+ * You'll find several example sketches which should enable you to use the library.
  *
  * You are free to use it, change it or build on it. In case you like it, it would
  * be cool if you give it a star.
  *
  * If you find bugs, please inform me!
  *
+ *
  * Written by Wolfgang (Wolle) Ewald
  * https://wolles-elektronikkiste.de/adxl345-teil-1 (German)
  * https://wolles-elektronikkiste.de/en/adxl345-the-universal-accelerometer-part-1 (English)
  *
  *
+ *
  ******************************************************************************/
 
+ #ifndef ADXL345_WE_H_
+ #define ADXL345_WE_H_
+ 
+ #if (ARDUINO >= 100)
  #ifndef ADXL345_WE_H_
  #define ADXL345_WE_H_
  
@@ -69,6 +76,34 @@
      ADXL345_WAKE_UP_FREQ_2,
      ADXL345_WAKE_UP_FREQ_1,
  } adxl345_wakeUpFreq;
+ 
+ /** Used with register 0x31 (ADXL3XX_REG_DATA_FORMAT) to set g range */
+ // typedef enum {
+ //     ADXL343_RANGE_16_G = 0b11, /**< +/- 16g */
+ //     ADXL343_RANGE_8_G = 0b10,  /**< +/- 8g */
+ //     ADXL343_RANGE_4_G = 0b01,  /**< +/- 4g */
+ //     ADXL343_RANGE_2_G = 0b00,  /**< +/- 2g (default value) */
+   
+ //     ADXL34X_RANGE_16_G = 0b11, /**< +/- 16g */
+ //     ADXL34X_RANGE_8_G = 0b10,  /**< +/- 8g */
+ //     ADXL34X_RANGE_4_G = 0b01,  /**< +/- 4g */
+ //     ADXL34X_RANGE_2_G = 0b00   /**< +/- 2g (default value) */
+ //   } adxl34x_range_t;
+   
+ //   /** Possible interrupts sources on the ADXL343. */
+ //   union int_config {
+ //     uint8_t value; /**< Composite 8-bit value of the bitfield.*/
+ //     struct {
+ //       uint8_t overrun : 1;    /**< Bit 0 */
+ //       uint8_t watermark : 1;  /**< Bit 1 */
+ //       uint8_t freefall : 1;   /**< Bit 2 */
+ //       uint8_t inactivity : 1; /**< Bit 3 */
+ //       uint8_t activity : 1;   /**< Bit 4 */
+ //       uint8_t double_tap : 1; /**< Bit 5 */
+ //       uint8_t single_tap : 1; /**< Bit 6 */
+ //       uint8_t data_ready : 1; /**< Bit 7 */
+ //     } bits;                   /**< Individual bits in the bitfield. */
+ //   };
  
  typedef enum ADXL345_DATA_RATE
  {
@@ -223,12 +258,11 @@
  #endif
      /* registers */
      static constexpr uint8_t ADXL345_DEVID{0x00};
+     static constexpr uint8_t ADXL345_DEVICE{0xE5};
      static constexpr uint8_t ADXL345_THRESH_TAP{0x1D};
- 
      static constexpr uint8_t ADXL345_OFSX{0x1E};
      static constexpr uint8_t ADXL345_OFSY{0x1F};
      static constexpr uint8_t ADXL345_OFSZ{0x20};
- 
      static constexpr uint8_t ADXL345_DUR{0x21};
      static constexpr uint8_t ADXL345_LATENT{0x22};
      static constexpr uint8_t ADXL345_WINDOW{0x23};
@@ -238,7 +272,6 @@
      static constexpr uint8_t ADXL345_ACT_INACT_CTL{0x27};
      static constexpr uint8_t ADXL345_THRESH_FF{0x28};
      static constexpr uint8_t ADXL345_TIME_FF{0x29};
- 
      static constexpr uint8_t ADXL345_TAP_AXES{0x2A};
      static constexpr uint8_t ADXL345_ACT_TAP_STATUS{0x2B};
      static constexpr uint8_t ADXL345_BW_RATE{0x2C};
@@ -247,14 +280,12 @@
      static constexpr uint8_t ADXL345_INT_MAP{0x2F};
      static constexpr uint8_t ADXL345_INT_SOURCE{0x30};
      static constexpr uint8_t ADXL345_DATA_FORMAT{0x31};
- 
      static constexpr uint8_t ADXL345_DATAX0{0x32};
      static constexpr uint8_t ADXL345_DATAX1{0x33};
      static constexpr uint8_t ADXL345_DATAY0{0x34};
      static constexpr uint8_t ADXL345_DATAY1{0x35};
      static constexpr uint8_t ADXL345_DATAZ0{0x36};
      static constexpr uint8_t ADXL345_DATAZ1{0x37};
- 
      static constexpr uint8_t ADXL345_FIFO_CTL{0x38};
      static constexpr uint8_t ADXL345_FIFO_STATUS{0x39};
  
@@ -272,6 +303,10 @@
      /* Basic settings */
  
      bool init();
+     uint8_t getDeviceID(void);
+     bool checkConnection();
+
+ 
  #ifdef USE_I2C
      void setWire(TwoWire *w);
      void setAddr(uint8_t addr);
@@ -295,11 +330,8 @@
      void getAcceleration(double* xyz); // todo move to private
  
      xyzFloat getRawValues();
-     void getRawValues(xyzFloat *rawVal);
      xyzFloat getCorrectedRawValues();
-     void getCorrectedRawValues(xyzFloat *rawVal);
      xyzFloat getGValues();
-     void getGValues(xyzFloat *gVal);
      float getVectorG();
      float getVectorG(xyzVectorG *gVal);
      // float getVectorG(float *x, float *y, float *z);
@@ -377,7 +409,11 @@
       *    2. FIFO samples (max 32). Defines the size of the FIFO. @note One sample is an x,y,z triple.
       */
      void setFifoParameters(adxl345_triggerInt intNumber, uint8_t samples=32);
- 
+    
+    //  uint8_t getFifoSize(void);
+    byte getFifoSize(void);
+     void burstReadXYZ(float* x, float* y, float* z, byte samples);  // burst read function for getting all samples from fifo
+
      /** Choose the following FIFO modes:
       *    ADXL345_FIFO     -  you choose the start, ends when FIFO is full (at defined limit)
       *    ADXL345_STREAM   -  FIFO always filled with new data, old data replaced if FIFO is full; you choose the stop
