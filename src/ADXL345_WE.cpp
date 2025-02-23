@@ -17,7 +17,6 @@
  #include "Arduino.h"
 
  #include "ADXL345_WE.h"
- #include "ADXL345_WE.h"
 
  // #define ADXL345_DEBUG 1
  

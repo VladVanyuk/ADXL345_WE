@@ -22,15 +22,7 @@
  #ifndef ADXL345_WE_H_
  #define ADXL345_WE_H_
  
- #if (ARDUINO >= 100)
- #ifndef ADXL345_WE_H_
- #define ADXL345_WE_H_
- 
- #if (ARDUINO >= 100)
  #include "Arduino.h"
- #else
- #include "WProgram.h"
- #endif
  
  #define USE_I2C
  // #define USE_SPI
