@@ -99,15 +99,18 @@
      writeToRegister(ADXL345_POWER_CTL, 16);
      setMeasureMode(true);
      rangeFactor = 1.0;
-     corrFact.x = 1.0;
-     corrFact.y = 1.0;
-     corrFact.z = 1.0;
-     offsetVal.x = 0.0;
-     offsetVal.y = 0.0;
-     offsetVal.z = 0.0;
-     angleOffsetVal.x = 0.0;
-     angleOffsetVal.y = 0.0;
-     angleOffsetVal.z = 0.0;
+    //  corrFact.x = 1.0;
+    //  corrFact.y = 1.0;
+    //  corrFact.z = 1.0;
+    corrFact = {1.0, 1.0, 1.0};
+    //  offsetVal.x = 0.0;
+    //  offsetVal.y = 0.0;
+    //  offsetVal.z = 0.0;
+    offsetVal = {0.0, 0.0, 0.0};
+    //  angleOffsetVal.x = 0.0;
+    //  angleOffsetVal.y = 0.0;
+    //  angleOffsetVal.z = 0.0;
+    angleOffsetVal = {0.0, 0.0, 0.0};
      writeToRegister(ADXL345_DATA_FORMAT, 0);
      setFullRes(true);
      uint8_t ctrlVal = readRegisterSingle(ADXL345_DATA_FORMAT);
@@ -1116,7 +1119,7 @@ void ADXL345_WE::burstReadXYZ(float* x, float* y, float* z, byte samples) {
          {
              regValue = _wire->read();
          }
-         Wire.endTransmission();
+        // Wire.endTransmission();
  #endif
      }
      else
@@ -1148,7 +1151,7 @@ void ADXL345_WE::burstReadXYZ(float* x, float* y, float* z, byte samples) {
          {
              buf[i] = _wire->read();
          }
-         Wire.endTransmission();
+        // Wire.endTransmission();
          /* todo OR
          Wire.beginTransmission(ADXL345_DEVICE); // start transmission to device
          Wire.requestFrom(ADXL345_DEVICE, num);    // request 6 bytes from device
