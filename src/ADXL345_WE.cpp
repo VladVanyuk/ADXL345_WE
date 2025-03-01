@@ -76,16 +76,21 @@
          {
              _wire = &Wire;
          }
+         #ifndef I2C_NO_SPEED_CONFIG
+         _wire->setClock(400000L);
+         #endif
          _wire->begin();
      }
  #elif defined USE_I2C
      if (!useSPI)
      {
- 
          if (_wire == nullptr)
          {
              _wire = &Wire;
          }
+         #ifndef I2C_NO_SPEED_CONFIG
+         _wire->setClock(400000L);
+         #endif
          _wire->begin();
      }
  #endif
