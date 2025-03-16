@@ -290,7 +290,7 @@ public:
     /* Other */
 
     static constexpr float MILLI_G_PER_LSB{3.9};
-    static constexpr float UNITS_PER_G{256.41}; // = 1/0.0039
+    static constexpr float UNITS_PER_G{256.41}; // = 1/0.0039 
 
     /* Basic settings */
 
@@ -402,7 +402,7 @@ public:
      *             ADXL345_TRIGGER
      *    2. FIFO samples (max 32). Defines the size of the FIFO. @note One sample is an x,y,z triple.
      */
-    void setFifoParameters(adxl345_triggerInt intNumber, uint8_t samples = 32);
+    void setFifoParameters(adxl345_triggerInt intNumber, uint8_t samples = MAX_ADXL_BUFF_SIZE);
 
     //  uint8_t getFifoSize(void);
     byte getFifoSize(void);
