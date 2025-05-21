@@ -211,7 +211,7 @@ void ADXL345_WE::setCorrFactors(float xMin, float xMax, float yMin, float yMax, 
 
 void ADXL345_WE::setDataRate(adxl345_dataRate rate)
 {
-    this->regVal |= readRegisterSingle(ADXL345_BW_RATE);
+    this->regVal = readRegisterSingle(ADXL345_BW_RATE);
     this->regVal &= 0xF0;
     this->regVal |= rate;
     writeToRegister(ADXL345_BW_RATE, this->regVal);
